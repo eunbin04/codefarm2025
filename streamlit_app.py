@@ -6,7 +6,7 @@ st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
 # 데이터 불러오기(priva)
 def load_data():
-    df = pd.read_csv('priva.csv', sep=';', decimal='.', skiprows=3, encoding='utf-8')
+    df = pd.read_csv('priva.csv', sep=';', decimal='.', header=3, encoding='utf-8')
     df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True)
     df.set_index('Timestamp', inplace=True)
