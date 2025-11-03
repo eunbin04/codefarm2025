@@ -1,7 +1,7 @@
 # app.py
 import streamlit as st
 from home import show_home
-from streamlit_app import show_dashboard
+from dashboard import show_dashboard
 
 st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
