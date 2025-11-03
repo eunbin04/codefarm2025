@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
+st.set_page_config(page_title='환경 데이터 대시보드', page_icon=':seedling:')
+
 # 데이터 불러오기 예제 (priva.csv 등)
 def load_data():
     df = pd.read_csv('priva.csv', sep=';', decimal='.', skiprows=3, encoding='utf-8')
@@ -28,7 +30,19 @@ time_range = st.slider(
 
 filtered = data.loc[time_range[0]:time_range[1]]
 
-selected_vars = st.multiselect('측정 변수 선택', filtered.columns.tolist(), default=filtered.columns[:6].tolist())
+# 컬럼명 맵핑
+name_map = {
+    'Meas CO2 Level': 'CO2',
+    'Meas Rel Hum': '내부 습도',
+    'Meas GH Temp': '온실 온도',
+    'Meas Out Temp': '외부 온도',
+    'Meas Light': '조도',
+    'Irrig Flow': '관개 유량',
+}
+
+mapped_columns = [name_map.get(col, col) for col in filtered.columns]
+
+selected_vars = st.multiselect('측정 변수 선택', options=filtered.columns.tolist(), format_func=lambda x: name_map.get(x, x), default=filtered.columns[:6])
 
 if selected_vars:
     st.line_chart(filtered[selected_vars])
