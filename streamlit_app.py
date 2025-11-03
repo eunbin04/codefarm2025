@@ -10,7 +10,10 @@ def load_data():
     df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True)
     df.set_index('Timestamp', inplace=True)
-    df = df.apply(pd.to_numeric, errors='coerce')
+
+    # 컬럼명은 문자열이므로 변환하지 않고, 데이터 값에만 numeric 적용
+    for col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
     df.replace(-32767, pd.NA, inplace=True)
     return df
 
@@ -46,17 +49,15 @@ mapped_columns = [name_map.get(col, col) for col in filtered.columns]
 
 selected_vars = st.multiselect(
     '측정 변수 선택',
-    options=filtered.columns.tolist(),
-    format_func=lambda x: name_map.get(x, x), 
-    default=filtered.columns[:6].tolist()
+    options=data.columns.tolist(),
+    format_func=lambda x: name_map.get(x, x),
+    default=data.columns[:6].tolist()
 )
 
 if selected_vars:
     mapped_cols = [name_map.get(col, col) for col in selected_vars]
-
-    plot_data = filtered[selected_vars].copy()
+    plot_data = data[selected_vars].copy()
     plot_data.columns = mapped_cols
-
     st.line_chart(plot_data)
 else:
     st.warning('적어도 하나 이상의 변수를 선택해 주세요.')
