@@ -16,7 +16,9 @@ def load_data():
 
 data = load_data()
 
-min_time = data.index.min().to_pydatetime()  # pandas Timestamp -> datetime.datetime 변환
+st.title(':seedling: 환경 모니터링 대시보드')
+
+min_time = data.index.min().to_pydatetime()  
 max_time = data.index.max().to_pydatetime()
 
 time_range = st.slider(
@@ -42,7 +44,7 @@ name_map = {
 
 mapped_columns = [name_map.get(col, col) for col in filtered.columns]
 
-selected_vars = st.multiselect('측정 변수 선택', options=filtered.columns.tolist(), format_func=lambda x: name_map.get(x, x), default=filtered.columns[:6])
+selected_vars = st.multiselect('측정 변수 선택', filtered.columns.tolist(), default=filtered.columns[:6].tolist())
 
 if selected_vars:
     st.line_chart(filtered[selected_vars])
