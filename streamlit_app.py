@@ -59,9 +59,8 @@ selected_vars = st.multiselect(
 )
 
 if selected_vars:
-    mapped_cols = [name_map.get(col, col) for col in selected_vars]
-    plot_data = data[selected_vars].copy()
-    plot_data.columns = mapped_cols
+    plot_data = filtered[selected_vars].copy()  # 필터링된 데이터에서 추출해야 함
+    plot_data.columns = [name_map.get(col, col) for col in selected_vars]
     st.line_chart(plot_data)
 else:
     st.warning('적어도 하나 이상의 변수를 선택해 주세요.')
