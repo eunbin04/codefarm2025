@@ -1,151 +1,61 @@
 import streamlit as st
 import pandas as pd
 import math
-from pathlib import Path
 
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
-)
-
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
+# Set page config
+st.set_page_config(page_title='환경 데이터 대시보드', page_icon=':seedling:')
 
 @st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
+def load_data():
+    df = pd.read_csv('priva.csv', sep=';', decimal='.', skiprows=3, encoding='utf-8')
+    # 날짜시간 변환
+    df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True)
+    df.set_index('Timestamp', inplace=True)
+    # 숫자 변환 및 -32767 같은 이상치 처리
+    df = df.apply(pd.to_numeric, errors='coerce')
+    df.replace(-32767, pd.NA, inplace=True)
+    return df
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
+data = load_data()
 
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
+st.title(':seedling: 환경 모니터링 대시보드')
 
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
-
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
-    )
-
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
-
-    return gdp_df
-
-gdp_df = get_gdp_data()
-
-# -----------------------------------------------------------------------------
-# Draw the actual page
-
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
-
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
-
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
+# 시간 범위 선택
+min_time, max_time = data.index.min(), data.index.max()
+time_range = st.slider(
+    '데이터 시간 범위 선택',
+    min_value=min_time,
+    max_value=max_time,
+    value=(min_time, max_time),
+    format="YYYY-MM-DD HH:mm"
 )
 
-''
-''
+filtered = data.loc[time_range[0]:time_range[1]]
 
+# 표시할 변수 선택
+variables = filtered.columns.to_list()
+selected_vars = st.multiselect('측정 변수 선택', variables, default=variables[:6])
 
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
+# 시계열 차트
+if selected_vars:
+    st.line_chart(filtered[selected_vars])
 
-st.header(f'GDP in {to_year}', divider='gray')
+    # 첫/마지막 시점 데이터와 증감률 출력
+    st.header('기간 내 데이터 요약')
+    cols = st.columns(4)
+    first_row = filtered[selected_vars].iloc[0]
+    last_row = filtered[selected_vars].iloc[-1]
 
-''
-
-cols = st.columns(4)
-
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
-
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
-        else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
-
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+    for i, var in enumerate(selected_vars):
+        col = cols[i % 4]
+        with col:
+            start_val = first_row[var]
+            end_val = last_row[var]
+            if pd.isna(start_val) or start_val == 0 or pd.isna(end_val):
+                diff_ratio = 'n/a'
+            else:
+                diff_ratio = f'{end_val / start_val:.2f}x'
+            st.metric(label=var, value=f'{end_val:.2f}', delta=diff_ratio)
+else:
+    st.warning('적어도 하나 이상의 변수를 선택해 주세요.')
