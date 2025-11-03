@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-st.set_page_config(page_title='CODEFARM DASHBOARD', page_icon=':seedling:')
+st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
-# 데이터 불러오기 예제 (priva.csv 등)
+# 데이터 불러오기(priva)
 def load_data():
     df = pd.read_csv('priva.csv', sep=';', decimal='.', skiprows=3, encoding='utf-8')
     df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
@@ -52,6 +52,11 @@ selected_vars = st.multiselect(
 )
 
 if selected_vars:
-    st.line_chart(filtered[selected_vars])
+    mapped_cols = [name_map.get(col, col) for col in selected_vars]
+
+    plot_data = filtered[selected_vars].copy()
+    plot_data.columns = mapped_cols
+
+    st.line_chart(plot_data)
 else:
     st.warning('적어도 하나 이상의 변수를 선택해 주세요.')
