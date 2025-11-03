@@ -7,7 +7,7 @@ st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 # 데이터 불러오기(priva)
 def load_data():
     # header=1로 변수명 라인 지정
-    df = pd.read_csv('priva.csv', sep=';', decimal='.', header=1, encoding='utf-8')
+    df = pd.read_csv('priva.csv', sep=';', decimal='.', header=0, encoding='utf-8')
     df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
     # 3번째 줄(단위)는 skip되므로 데이터는 4번째 줄(인덱스=2)부터 잘 맞음
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True)
