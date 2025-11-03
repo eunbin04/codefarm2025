@@ -7,15 +7,20 @@ st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 # 데이터 불러오기(priva)
 def load_data():
     df = pd.read_csv('priva.csv', sep=';', decimal='.', header=0, encoding='utf-8')
+       # 시간 열만 3번째 행부터 별도로 추출
+    timestamp = pd.read_csv('priva.csv', sep=';', decimal='.', header=None, encoding='utf-8', skiprows=3, usecols=[0])
+    # 날짜 변환
+    timestamp = pd.to_datetime(timestamp[0], dayfirst=True, errors='coerce')
     df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True)
+    df['Timestamp'] = timestamp
+    df = df[~df['Timestamp'].isna()]
     df.set_index('Timestamp', inplace=True)
     for col in df.columns:
         df[col] = pd.to_numeric(df[col], errors='coerce')
     df.replace(-32767, pd.NA, inplace=True)
-    df = df[~df.index.isna()]
-    return df
 
+    return df
+    
 data = load_data()
 
 st.title(':seedling: 환경 모니터링 대시보드')
