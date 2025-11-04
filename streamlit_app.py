@@ -7,7 +7,7 @@ from sensordata import show_sensordata
 st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
 st.sidebar.title('🔍 메뉴')
-page = st.sidebar.radio('페이지 선택', ['홈', '온실 환경 관리'])
+page = st.sidebar.radio('페이지 선택', ['홈', '온실 환경 관리', 'Alarms', 'Sensor Data'])
 
 if page == '홈':
     show_home()
