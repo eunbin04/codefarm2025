@@ -58,7 +58,7 @@ def show_sensordata():
 
 
 
-    st.subheader("이동 평균 시계열 (3시간)")
+    st.subheader("🕒 이동 평균 시계열 (3시간)")
     window = 3
     for col in selected_vars:
         ma = filtered[col].rolling(window=window).mean()
@@ -68,13 +68,13 @@ def show_sensordata():
 
 
 
-    st.subheader("데이터 다운로드")
+    st.subheader("💾 데이터 다운로드")
     csv = filtered[selected_vars].to_csv().encode('utf-8')
     st.download_button(label="CSV 다운로드", data=csv, file_name='sensor_data.csv', mime='text/csv')
 
 
 
-    st.subheader("통계 요약")
+    st.subheader("📊 통계 요약")
     desc = filtered[selected_vars].describe().T[['mean', 'min', 'max']]
     desc.columns = ['평균', '최소', '최대']
     st.table(desc.style.format("{:.2f}"))
