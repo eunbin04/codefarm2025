@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 def show_alarms():
-    st.title("알림 (Alarms)")
+    st.title("🚨 알림")
 
     # 예시 알림 데이터 (시간, 알림 유형, 상태, 설명)
     alarm_data = {
