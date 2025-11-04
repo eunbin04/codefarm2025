@@ -14,7 +14,7 @@ def load_data():
     df.replace(-32767, pd.NA, inplace=True)
     return df
 
-def show_dashboard():
+def show_sensordata():
     st.title(':seedling: 온실 환경 관리')
 
     data = load_data()
