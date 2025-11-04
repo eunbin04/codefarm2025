@@ -35,4 +35,4 @@ def show_sensordata():
 
     # 선택할 센서 타입 체크박스
     show_temp = st.checkbox("온도", value=True)
-    show_humid = st.checkbox("습도", value=True
+    show_humid = st.checkbox("습도", value=True)
