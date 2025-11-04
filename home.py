@@ -8,34 +8,6 @@ def show_home():
     st.markdown("## 메뉴 바로가기")
 
     cols = st.columns(2)
-    button_style = """
-        <style>
-            div.stButton > button {
-                height: 150px;
-                width: 100%;
-                font-size: 24px;
-                font-weight: bold;
-                border-radius: 12px;
-                border: none;
-                color: #333;
-                cursor: pointer;
-                margin-bottom: 20px;
-            }
-            .home {
-                background-color: #fff9c4;
-            }
-            .dashboard {
-                background-color: #bbdefb;
-            }
-            .greenhouse {
-                background-color: #c8e6c9;
-            }
-            .alert {
-                background-color: #ffcdd2;
-            }
-        </style>
-    """
-    st.markdown(button_style, unsafe_allow_html=True)
 
     with cols[0]:
         if st.button("🏠 홈", key="home_btn"):
@@ -62,3 +34,17 @@ def show_home():
     with cols[1]:
         if st.button("🚨 알림", key="alert_btn"):
             st.experimental_set_query_params(page="알림")
+    
+    st.markdown("""
+        <style>
+        button[key="dashboard_btn"] {
+            background-color: #bbdefb !important;
+        }
+        button[key="greenhouse_btn"] {
+            background-color: #c8e6c9 !important;
+        }
+        button[key="alert_btn"] {
+            background-color: #ffcdd2 !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
