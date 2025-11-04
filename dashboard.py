@@ -15,7 +15,7 @@ def load_data():
     return df
 
 def show_dashboard():
-    st.title(':seedling: 환경 모니터링 대시보드')
+    st.title(':seedling: 온실 환경 관리')
 
     data = load_data()
 
