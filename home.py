@@ -12,17 +12,17 @@ def show_home():
     cols = st.columns(2)
 
     with cols[0]:
-        if st.button("🏠 홈"):
-            st.experimental_set_query_params(page="홈")
+        if st.button("🏠 홈\n\n메인 페이지로 이동", key="card_home"):
+            set_page("홈")
+
     with cols[1]:
-        if st.button("📊 대시보드"):
-            st.experimental_set_query_params(page="대시보드")
+        if st.button("📊 대시보드\n\n데이터 시각화", key="card_dashboard"):
+            set_page("대시보드")
 
     with cols[0]:
-        if st.button("🌿 온실 환경 관리"):
-            st.experimental_set_query_params(page="온실 환경 관리")
-    with cols[1]:
-        if st.button("🚨 알림"):
-            st.experimental_set_query_params(page="알림")
+        if st.button("🌿 온실 환경 관리\n\n센서 데이터 보기", key="card_greenhouse"):
+            set_page("온실 환경 관리")
 
-    # 방법 2: 버튼 대신 클릭 가능한 카드 형태(이미지+텍스트) 등으로 꾸밀 수도 있음.
+    with cols[1]:
+        if st.button("🚨 알림\n\n경고 및 이벤트", key="card_alerts"):
+            set_page("알림")
