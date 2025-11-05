@@ -60,7 +60,7 @@ def show_alarms():
     st.markdown("### 알림 상세")
 
     # 시간을 선택지로 사용
-    alert_types = filtered_df["알림 시간"].tolist()
+    alert_types = filtered_df["시간"].tolist()
     selected_alert_type = st.selectbox("알림 시간 선택", options=alert_types)
 
     if selected_alert_type:
