@@ -50,7 +50,7 @@ def show_settings():
         table_data["설정 항목"].append(key)
         table_data["값"].append(display_value)
 
-    # 데이터 프레임으로 표 만들기
     df_settings = pd.DataFrame(table_data)
-    st.dataframe(df_settings.iloc[:, 0:])
+    st.table(df_settings.reset_index(drop=True))
+
 
