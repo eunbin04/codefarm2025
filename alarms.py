@@ -60,5 +60,3 @@ def show_alarms():
         st.markdown("---")
 
         
-if __name__ == "__main__":
-    show_alarms()

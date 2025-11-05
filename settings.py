@@ -32,8 +32,3 @@ def show_settings():
     st.write(f"농장명: {st.session_state['farm_name']}")
     st.write(f"경고 알림 활성화: {'✔️' if st.session_state['alert_enabled'] else '❌'}")
     st.write(f"데이터 업데이트 주기: {st.session_state['update_interval']} 분")
-
-
-
-if __name__ == "__main__":
-    show_settings()
