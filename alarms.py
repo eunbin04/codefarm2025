@@ -50,6 +50,7 @@ def show_alarms():
         st.write("시간:", selected_row["시간"])
         st.write("상태:", selected_row["상태"])
         st.write("설명:", selected_row["설명"])
+        
         # 추가적인 상세 정보나 조치 방법 등을 여기에 표시할 수 있습니다.
         st.markdown("#### 조치 방법")
         if selected_row["상태"] == "미해결":
