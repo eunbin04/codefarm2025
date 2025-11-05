@@ -1,56 +1,44 @@
 # dashboard.py
 import streamlit as st
-import pandas as pd
+import math
+import requests
 
-# 데이터 불러오기(priva)
-def load_data():
-    df = pd.read_csv('priva.csv', sep=';', decimal='.', header=0, encoding='utf-8')
-    df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True, errors='coerce')
-    df.set_index('Timestamp', inplace=True)
-    for col in df.columns:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-    df.replace(-32767, pd.NA, inplace=True)
-    return df
+def calc_vpd(temp_c, rh):
+    svp = 0.6108 * math.exp((17.27 * temp_c) / (temp_c + 237.3))
+    vpd = svp * (1 - rh / 100)
+    return round(vpd, 3)
 
 def show_dashboard():
-    st.title(':seedling: 프리바 데이터')
+    st.title("📈 대시보드")
 
-    data = load_data()
-
-    min_time = data.index.min().to_pydatetime()
-    max_time = data.index.max().to_pydatetime()
-
-    time_range = st.slider(
-        '데이터 시간 범위 선택',
-        min_value=min_time,
-        max_value=max_time,
-        value=(min_time, max_time),
-        format="YYYY-MM-DD HH:mm",
-        key='time_slider'
-    )
-
-    filtered = data.loc[time_range[0]:time_range[1]]
-
-    name_map = {
-        'Meas CO2 Level': 'CO2',
-        'Meas Rel Hum': '내부 습도',
-        'Meas GH Temp': '온실 온도',
-        'Meas Out Temp': '외부 온도',
-        'Meas Light': '조도',
-        'Irrig Flow': '관개 유량',
-    }
-
-    selected_vars = st.multiselect(
-        '측정 변수 선택',
-        options=data.columns.tolist(),
-        format_func=lambda x: name_map.get(x, x),
-        default=data.columns[:6].tolist()
-    )
-
-    if selected_vars:
-        plot_data = filtered[selected_vars].copy()  # 필터링된 데이터 사용
-        plot_data.columns = [name_map.get(col, col) for col in selected_vars]
-        st.line_chart(plot_data)
+    # 지역 입력 및 날씨 불러오기
+    region = st.text_input("지역명을 입력하세요", "서울")
+    if st.button("날씨 불러오기"):
+        # 예시용 가상 값 및 API 호출 구간
+        temp = 25  # 실시간 API로 가져올 값
+        rh = 70    # 실시간 API로 가져올 값
+        st.success(f"현재 온도: {temp}°C, 상대습도: {rh}%")
     else:
-        st.warning('적어도 하나 이상의 변수를 선택해 주세요.')
+        temp = 25
+        rh = 70
+
+    # VPD 계산
+    vpd = calc_vpd(temp, rh)
+    st.metric(label="VPD 증기압 결핍", value=f"{vpd} kPa")
+
+    # 이상적 범위 판별, 몰리에 선도 기준 메시지
+    if 0.8 <= vpd <= 1.2:
+        st.success("이상적인 VPD 범위(생육 촉진 구간)입니다.")
+    elif 1.2 < vpd <= 1.5:
+        st.warning("개화단계에 적합한 VPD 범위입니다.")
+    else:
+        st.error("비이상적 VPD입니다. 환경 조정 필요!")
+
+    st.markdown("""
+    <details>
+    <summary><b>몰리에 선도 설명</b></summary>
+    식물의 생장 최적 구간: VPD 0.8~1.2 kPa<br>
+    개화단계 적합: VPD 1.2~1.5 kPa<br>
+    광합성 최적: VPD 0.45~1.136 kPa
+    </details>
+    """, unsafe_allow_html=True)
