@@ -40,13 +40,12 @@ def show_alarms():
     st.dataframe(filtered_df.style.applymap(color_status, subset=["상태"]))
 
     st.markdown("### 알림 상세")
-    selected = st.selectbox("알림 선택", filtered_df.index)
-    if selected is not None:
-        st.write("###", filtered_df.loc[selected, "알림 유형"])
-        st.write("시간:", filtered_df.loc[selected, "시간"])
-        st.write("상태:", filtered_df.loc[selected, "상태"])
-        st.write("설명:", filtered_df.loc[selected, "설명"])
-        if filtered_df.loc[selected, "상태"] == "미해결":
+    if status_filter is not None:
+        st.write("###", filtered_df.loc[status_filter, "알림 유형"])
+        st.write("시간:", filtered_df.loc[status_filter, "시간"])
+        st.write("상태:", filtered_df.loc[status_filter, "상태"])
+        st.write("설명:", filtered_df.loc[status_filter, "설명"])
+        if filtered_df.loc[status_filter, "상태"] == "미해결":
             if st.button("해결됨으로 표시"):
-                filtered_df.at[selected, "상태"] = "해결됨"
+                filtered_df.at[status_filter, "상태"] = "해결됨"
                 st.success("알림 상태가 '해결됨'으로 업데이트되었습니다.")  
