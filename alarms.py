@@ -47,21 +47,21 @@ def show_alarms():
     df_alarms = pd.DataFrame(alarm_data)
 
 
-    status_filter = st.selectbox("알림 상태 선택", options=["전체", "해결됨", "미해결"])
+    status_filter = st.selectbox("알림 시간 선택", options=["전체", "해결됨", "미해결"])
 
     if status_filter == "전체":
         filtered_df = df_alarms
     else:
-        filtered_df = df_alarms[df_alarms["상태"] == status_filter]
+        filtered_df = df_alarms[df_alarms["시간"] == status_filter]
 
-    st.dataframe(filtered_df.style.map(color_status, subset=["상태"]))
+    st.dataframe(filtered_df.style.map(color_status, subset=["시간"]))
+
 
     st.markdown("### 알림 상세")
 
-
     # 알림 유형을 선택지로 사용
-    alert_types = filtered_df["알림 유형"].tolist()
-    selected_alert_type = st.selectbox("알림 유형 선택", options=alert_types)
+    alert_types = filtered_df["알림 시간"].tolist()
+    selected_alert_type = st.selectbox("알림 시간 선택", options=alert_types)
 
     if selected_alert_type:
         selected_row = filtered_df[filtered_df["알림 유형"] == selected_alert_type].iloc[0]
