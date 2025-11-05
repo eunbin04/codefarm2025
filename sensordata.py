@@ -1,12 +1,9 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-import os
-
-DATA_FILENAME = 'mc.csv' if os.getenv('DEPLOY_ENV') == 'web' else 'priva.csv'
+from datetime import timedelta
 
 # 데이터 불러오기(mc.csv)
-def load_data():
+def load_data(limit_recent_day=True):
     df = pd.read_csv('mc.csv', encoding='utf-8')
     df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
@@ -14,12 +11,20 @@ def load_data():
     for col in df.columns:
         df[col] = pd.to_numeric(df[col], errors='coerce')
     df.replace(-32767, pd.NA, inplace=True)
+
+    if limit_recent_day:
+        # 최근 하루 데이터만 필터링
+        max_time = df.index.max()
+        min_time = max_time - timedelta(days=1)
+        df = df.loc[min_time:max_time]
+
     return df
+
 
 def show_sensordata():
     st.title(':seedling: 온실 환경 관리')
 
-    data = load_data()
+    data = load_data(limit_recent_day=True)
 
     min_time = data.index.min().to_pydatetime()
     max_time = data.index.max().to_pydatetime()
@@ -47,13 +52,6 @@ def show_sensordata():
     else:
         st.warning('적어도 하나 이상의 변수를 선택해 주세요.')
 
-
-    st.subheader("🕒 이동 평균 시계열 (3시간)")
-    window = 3
-    for col in selected_vars:
-        ma = filtered[col].rolling(window=window).mean()
-        st.subheader(f"{col} 이동평균")
-        st.line_chart(ma)
 
 
     st.subheader("💾 데이터 다운로드")
