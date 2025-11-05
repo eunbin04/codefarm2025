@@ -1,6 +1,8 @@
 # alarms.py
 import streamlit as st
 import pandas as pd
+import random
+from datetime import datetime, timedelta
 
 def color_status(val):
     if val == "해결됨":
@@ -15,18 +17,35 @@ def color_status(val):
 def show_alarms():
     st.title("🚨 알림")
 
-    alarm_data = {
-        "시간": ["2025-11-04 08:15", "2025-11-04 09:30", "2025-11-04 10:45"],
-        "알림 유형": ["이상치", "결측치", "VPD 경고"],
-        "상태": ["해결됨", "미해결", "해결됨"],
-        "설명": [
-            "온도 100℃ 감지",
-            "습도 센서에서 몇 분동안 결측 발생",
-            "적정 VPD 범위 초과"
-        ]
+    alarm_types = ["이상치", "결측치", "VPD 경고"]
+    states = ["해결됨", "미해결"]
+    descriptions = {
+        "이상치": ["온도 100℃ 감지", "CO2 농도 이상치", "조도 센서 이상"],
+        "결측치": ["습도 센서에서 몇 분동안 결측 발생", "토양수분 센서 데이터 누락"],
+        "VPD 경고": ["적정 VPD 범위 초과", "VPD 급격 변화 감지"]
     }
 
+    base_time = datetime.strptime("2025-11-04 08:00", "%Y-%m-%d %H:%M")
+    alarm_data = {
+        "시간": [],
+        "알림 유형": [],
+        "상태": [],
+        "설명": []
+    }
+
+    for i in range(10):
+        alarm_type = random.choice(alarm_types)
+        state = random.choice(states)
+        description = random.choice(descriptions[alarm_type])
+        time = base_time + timedelta(minutes=45 * i)
+
+        alarm_data["시간"].append(time.strftime("%Y-%m-%d %H:%M"))
+        alarm_data["알림 유형"].append(alarm_type)
+        alarm_data["상태"].append(state)
+        alarm_data["설명"].append(description)
+
     df_alarms = pd.DataFrame(alarm_data)
+
 
     status_filter = st.selectbox("알림 상태 선택", options=["전체", "해결됨", "미해결"])
 
