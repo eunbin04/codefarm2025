@@ -18,6 +18,8 @@ def load_data(limit_recent_day=True):
         min_time = max_time - timedelta(days=1)
         df = df.loc[min_time:max_time]
 
+    df = ["temperature","humidity","light","wet_bulb_temperature","dew_point","hd","vpd"]
+
     return df
 
 
