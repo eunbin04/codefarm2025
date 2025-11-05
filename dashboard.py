@@ -9,11 +9,13 @@ def calc_vpd(temp_c, rh):
 def show_dashboard():
     st.title("📈 대시보드")
 
-    temp = st.slider("온도 (°C)", min_value=-30.0, max_value=60.0, value=25.0, step=0.1)
-    rh = st.slider("상대습도 (%)", min_value=0.0, max_value=100.0, value=70.0, step=0.1)
+    st.markdown("### VPD 계산기")
+
+    temp = st.slider("🔥 온도 (°C)", min_value=-10.0, max_value=40.0, value=25.0, step=0.1)
+    rh = st.slider("💧 상대습도 (%)", min_value=0.0, max_value=100.0, value=70.0, step=0.1)
 
     vpd = calc_vpd(temp, rh)
-    st.metric(label="VPD 증기압 결핍", value=f"{vpd} kPa")
+    st.metric(label="VPD", value=f"{vpd} kPa")
 
     if 0.8 <= vpd <= 1.2:
         st.success("이상적인 VPD 범위(생육 촉진 구간)입니다.")
@@ -25,11 +27,12 @@ def show_dashboard():
     st.markdown("""
     <details>
     <summary><b>몰리에 선도 설명</b></summary>
-    식물의 생장 최적 구간: VPD 0.8~1.2 kPa<br>
-    개화단계 적합: VPD 1.2~1.5 kPa<br>
-    광합성 최적: VPD 0.45~1.136 kPa
+    식물의 생장 최적 구간 설명<br>
+    ex) 개화단계 적합: VPD 1.2~1.5 kPa<br>
+    ex) 광합성 최적: VPD 0.45~1.136 kPa
     </details>
     """, unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     show_dashboard()
