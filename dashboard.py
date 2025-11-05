@@ -26,6 +26,7 @@ def show_dashboard():
 
     st.markdown("""
     <details>
+    <br>
     <summary><b>몰리에 선도 설명</b></summary>
     식물의 생장 최적 구간 설명<br>
     ex) 개화단계 적합: VPD 1.2~1.5 kPa<br>
