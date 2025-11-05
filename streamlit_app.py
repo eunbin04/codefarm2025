@@ -23,12 +23,11 @@ elif page == '설정':
     
 
 
-
 st.sidebar.markdown("---")  
 st.sidebar.markdown("© 2025 CODEFARM")
-st.sidebar.markdown("개발자: " \
-"                    김유경" \
+st.sidebar.markdown('"개발자:" \
+"                   "김유경" \
                     "박은빈" \
                     "박주영" \
                     "신예은" \
-                    "우가연")
+                    "우가연"')
