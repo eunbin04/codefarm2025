@@ -1,13 +1,12 @@
-# sensordata.py
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# 데이터 불러오기(priva)
+# 데이터 불러오기(mc.csv)
 def load_data():
-    df = pd.read_csv('priva.csv', sep=';', decimal='.', header=0, encoding='utf-8')
+    df = pd.read_csv('mc.csv', encoding='utf-8')
     df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True, errors='coerce')
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
     df.set_index('Timestamp', inplace=True)
     for col in df.columns:
         df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -33,39 +32,25 @@ def show_sensordata():
 
     filtered = data.loc[time_range[0]:time_range[1]]
 
-    name_map = {
-        'Meas CO2 Level': 'CO2',
-        'Meas Rel Hum': '내부 습도',
-        'Meas GH Temp': '온실 온도',
-        'Meas Out Temp': '외부 온도',
-        'Meas Light': '조도',
-        'Irrig Flow': '관개 유량',
-    }
-
     selected_vars = st.multiselect(
         '측정 변수 선택',
         options=data.columns.tolist(),
-        format_func=lambda x: name_map.get(x, x),
         default=data.columns[:6].tolist()
     )
 
     if selected_vars:
-        plot_data = filtered[selected_vars].copy()  # 필터링된 데이터 사용
-        plot_data.columns = [name_map.get(col, col) for col in selected_vars]
+        plot_data = filtered[selected_vars].copy()
         st.line_chart(plot_data)
     else:
         st.warning('적어도 하나 이상의 변수를 선택해 주세요.')
-
 
 
     st.subheader("🕒 이동 평균 시계열 (3시간)")
     window = 3
     for col in selected_vars:
         ma = filtered[col].rolling(window=window).mean()
-        var_name = name_map.get(col, col)
-        st.subheader(f"{var_name} 이동평균")
+        st.subheader(f"{col} 이동평균")
         st.line_chart(ma)
-
 
 
     st.subheader("💾 데이터 다운로드")
@@ -73,11 +58,7 @@ def show_sensordata():
     st.download_button(label="CSV 다운로드", data=csv, file_name='sensor_data.csv', mime='text/csv')
 
 
-
     st.subheader("📊 통계 요약")
     desc = filtered[selected_vars].describe().T[['mean', 'min', 'max']]
     desc.columns = ['평균', '최소', '최대']
     st.table(desc.style.format("{:.2f}"))
-
-
-
