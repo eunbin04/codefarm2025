@@ -52,12 +52,13 @@ def show_sensordata():
     else:
         st.warning('적어도 하나 이상의 변수를 선택해 주세요.')
 
-
+    st.sidebar.markdown("---")
 
     st.subheader("💾 데이터 다운로드")
     csv = filtered[selected_vars].to_csv().encode('utf-8')
     st.download_button(label="CSV 다운로드", data=csv, file_name='sensor_data.csv', mime='text/csv')
 
+    st.sidebar.markdown("---")
 
     st.subheader("📊 통계 요약")
     desc = filtered[selected_vars].describe().T[['mean', 'min', 'max']]

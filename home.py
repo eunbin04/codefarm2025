@@ -4,33 +4,18 @@ def show_home():
     st.title('안녕하세요! 👋')
     st.write('4조 코드팜입니다.')
     st.write('⬅️왼쪽 메뉴를 통해 대시보드 페이지로 이동하세요.')
+    st.image('https://codefarm2025.github.io/assets/images/codefarm_logo.png', use_column_width=True)
+    st.markdown("""
 
-
-st.markdown("---")  # 구분선 추가
-
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.header("온도 및 습도")
-    # 온도, 습도 관련 시각화
-
-with col2:
-    st.header("CO2 및 조도")
-    # CO2, 조도 관련 시각화
-
-st.markdown("---")  # 구분선 추가
-
-with st.container():
-    st.subheader("온도 데이터")
-    # 온도 관련 차트, 텍스트 등 넣기
-
-st.markdown("---")  # 구분선 추가
-
-with st.container():
-    st.subheader("습도 데이터")
-    # 습도 관련 내용
-
-
-
-st.markdown('<div class="stCard">내용</div>', unsafe_allow_html=True)
+    ### 🌱 CODEFARM 소개
+    CODEFARM은 스마트 온실 관리 시스템으로, 온실의 환경 데이터를 실시간으로 모니터링하고 분석할 수 있는 플랫폼입니다.  
+    온실 내부의 온도, 습도, CO2 농도, 조도 등의 다양한 센서 데이터를 시각화하여 사용자에게 제공합니다.         
+    ### 🔍 주요 기능
+    - **데이터 시각화**: 온실 환경 데이터를 그래프로 시각화하여 쉽게 이해할 수 있습니다.  
+    - **데이터 필터링**: 원하는 시간 범위와 측정 변수를 선택하여 맞춤형 데이터를 확인할 수 있습니다.  
+    - **데이터 다운로드**: 필터링된 데이터를 CSV 파일로 다운로드할 수 있습니다.  
+    - **알림 설정**: 특정 조건에 따라 알림을 설정하여 실시간으로 상황을 파악할 수 있습니다.  
+    - **사용자 설정**: 개인 맞춤형 환경 설정이 가능합니다.  
+    ### 🚀 시작하기
+    왼쪽 사이드바에서 '대시보드' 페이지로 이동하여 온실 환경 데이터를 확인해보세요!
+    """)
