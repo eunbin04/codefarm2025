@@ -58,7 +58,7 @@ def show_alarms():
             ">
         """
 
-        box_end = "</div>"
+        
 
         st.markdown(box_style, unsafe_allow_html=True)
         st.markdown(f"### {selected_row['알림 유형']}")
@@ -74,6 +74,7 @@ def show_alarms():
         else:
             st.write("- 이미 해결된 알림입니다.")
 
+        box_end = "</div>"
         st.markdown(box_end, unsafe_allow_html=True)
 
 
