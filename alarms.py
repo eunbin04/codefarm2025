@@ -52,7 +52,7 @@ def show_alarms():
     if status_filter == "전체":
         filtered_df = df_alarms
     else:
-        filtered_df = df_alarms[df_alarms["시간"] == status_filter]
+        filtered_df = df_alarms[df_alarms["상태"] == status_filter]
 
     st.dataframe(filtered_df.style.map(color_status, subset=["상태"]))
 
