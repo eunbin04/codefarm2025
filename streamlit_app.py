@@ -7,8 +7,8 @@ from settings import show_settings
 
 st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
-st.sidebar.title('🔍 메뉴')
-page = st.sidebar.radio('페이지 선택', ['홈', '대시보드', '온실 환경 관리', '알림', '설정'])
+st.sidebar.title('메뉴')
+page = st.sidebar.radio(['🏠홈', '📈대시보드', '🌿온실 환경 관리', '🚨알림', '⚙️설정'])
 
 if page == '홈':
     show_home()
