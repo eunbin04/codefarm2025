@@ -52,5 +52,5 @@ def show_settings():
 
     # 데이터 프레임으로 표 만들기
     df_settings = pd.DataFrame(table_data)
-    st.dataframe(df_settings.iloc[:, 1:])
+    st.dataframe(df_settings.iloc[:, 0:])
 
