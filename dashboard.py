@@ -11,8 +11,8 @@ def show_dashboard():
 
     st.markdown("### VPD 계산기")
 
-    temp = st.slider("🔥 온도 (°C)", min_value=-10.0, max_value=40.0, value=25.0, step=0.1)
-    rh = st.slider("💧 상대습도 (%)", min_value=0.0, max_value=100.0, value=70.0, step=0.1)
+    temp = st.number_input("🔥 온도 (°C)", min_value=-10.0, max_value=40.0, value=25.0, step=0.1)
+    rh = st.number_input("💧 상대습도 (%)", min_value=0.0, max_value=100.0, value=70.0, step=0.1)
 
     vpd = calc_vpd(temp, rh)
     st.metric(label="VPD", value=f"{vpd} kPa")
@@ -26,7 +26,6 @@ def show_dashboard():
 
     st.markdown("""
     <details>
-    <br>
     <summary><b>몰리에 선도 설명</b></summary>
     식물의 생장 최적 구간 설명<br>
     ex) 개화단계 적합: VPD 1.2~1.5 kPa<br>
