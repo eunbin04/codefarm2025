@@ -59,12 +59,12 @@ def show_alarms():
 
     st.markdown("### 알림 상세")
 
-    # 알림 유형을 선택지로 사용
+    # 시간을 선택지로 사용
     alert_types = filtered_df["알림 시간"].tolist()
     selected_alert_type = st.selectbox("알림 시간 선택", options=alert_types)
 
     if selected_alert_type:
-        selected_row = filtered_df[filtered_df["알림 유형"] == selected_alert_type].iloc[0]
+        selected_row = filtered_df[filtered_df["알림 시간"] == selected_alert_type].iloc[0]
         border_color = "#4CAF50" if selected_row["상태"] == "해결됨" else "#FF6347"
 
         box_html = f"""
