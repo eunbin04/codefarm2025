@@ -17,12 +17,12 @@ def show_alarms():
 
     alarm_data = {
         "시간": ["2025-11-04 08:15", "2025-11-04 09:30", "2025-11-04 10:45"],
-        "알림 유형": ["온도 초과", "습도 부족", "CO2 이상"],
+        "알림 유형": ["이상치", "결측치", "VPD 경고"],
         "상태": ["해결됨", "미해결", "해결됨"],
         "설명": [
-            "온도가 35도 이상 감지되어 경고 발생",
-            "습도 30% 이하로 떨어져 경고 발생",
-            "CO2 농도가 기준치를 초과함"
+            "온도 100℃로 감지되어 경고 발생",
+            "습도 센서에서 몇 분동안 결측 발생하여 경고 발생",
+            "적정 VPD 범위 초과함"
         ]
     }
 
@@ -39,16 +39,14 @@ def show_alarms():
 
     st.markdown("### 알림 상세")
 
-    selected_index = st.selectbox("상세보기 알림 선택", options=filtered_df.index)
 
-    if selected_index is not None:
-        st.write("###", filtered_df.loc[selected_index, "알림 유형"])
-        st.write("시간:", filtered_df.loc[selected_index, "시간"])
-        st.write("상태:", filtered_df.loc[selected_index, "상태"])
-        st.write("설명:", filtered_df.loc[selected_index, "설명"])
+    # 알림 유형을 선택지로 사용
+    alert_types = filtered_df["알림 유형"].tolist()
+    selected_alert_type = st.selectbox("상세보기 알림 유형 선택", options=alert_types)
 
-        if filtered_df.loc[selected_index, "상태"] == "미해결":
-            if st.button("해결됨으로 표시"):
-                df_alarms.at[selected_index, "상태"] = "해결됨"
-                st.success("알림 상태가 '해결됨'으로 업데이트되었습니다.")
-                st.experimental_rerun()
+    if selected_alert_type:
+        selected_row = filtered_df[filtered_df["알림 유형"] == selected_alert_type].iloc[0]
+        st.write("###", selected_row["알림 유형"])
+        st.write("시간:", selected_row["시간"])
+        st.write("상태:", selected_row["상태"])
+        st.write("설명:", selected_row["설명"])
