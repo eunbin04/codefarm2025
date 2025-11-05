@@ -31,11 +31,6 @@ with st.container():
     st.subheader("습도 데이터")
     # 습도 관련 내용
 
-with st.expander("온도 상세 보기"):
-    st.line_chart(temperature_data)
-
-with st.expander("습도 상세 보기"):
-    st.line_chart(humidity_data)
 
 
 st.markdown('<div class="stCard">내용</div>', unsafe_allow_html=True)
