@@ -15,7 +15,7 @@ def show_dashboard():
     rh = st.number_input("💧 상대습도 (%)", min_value=0.0, max_value=100.0, value=70.0, step=1.0)
 
     vpd = calc_vpd(temp, rh)
-    st.metric(label="VPD", value=f"{vpd} kPa")
+    st.metric(label="VPD", value=f"{vpd:.2f} kPa")
 
     if 0.8 <= vpd <= 1.2:
         st.success("이상적인 VPD 범위(생육 촉진 구간)입니다.")
