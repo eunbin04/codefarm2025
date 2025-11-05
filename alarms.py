@@ -46,12 +46,26 @@ def show_alarms():
 
     if selected_alert_type:
         selected_row = filtered_df[filtered_df["알림 유형"] == selected_alert_type].iloc[0]
-        st.write("###", selected_row["알림 유형"])
-        st.write("시간:", selected_row["시간"])
-        st.write("상태:", selected_row["상태"])
-        st.write("설명:", selected_row["설명"])
-        
-        # 추가적인 상세 정보나 조치 방법 등을 여기에 표시할 수 있습니다.
+
+        box_style = """
+        <div style="
+            border: 2px solid #4CAF50;  /* 초록색 테두리 */
+            padding: 15px;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            margin-bottom: 20px;
+            ">
+        """
+
+        box_end = "</div>"
+
+        st.markdown(box_style, unsafe_allow_html=True)
+        st.markdown(f"### {selected_row['알림 유형']}")
+        st.markdown(f"**시간:** {selected_row['시간']}")
+        st.markdown(f"**상태:** {selected_row['상태']}")
+        st.markdown(f"**설명:** {selected_row['설명']}")
+        st.markdown(box_end, unsafe_allow_html=True)
+
         st.markdown("#### 조치 방법")
         if selected_row["상태"] == "미해결":
             st.write("- 센서 점검 필요")

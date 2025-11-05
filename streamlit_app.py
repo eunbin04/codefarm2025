@@ -26,4 +26,4 @@ elif page == '설정':
 st.sidebar.markdown("---")  
 st.sidebar.markdown("© 2025 CODEFARM")
 st.sidebar.markdown("<strong>개발자<strong/>", unsafe_allow_html=True)
-st.sidebar.markdown("<br> 김유경<br>박은빈<br>박주영<br>신예은<br>우가연", unsafe_allow_html=True)
+st.sidebar.markdown("김유경<br>박은빈<br>박주영<br>신예은<br>우가연", unsafe_allow_html=True)
