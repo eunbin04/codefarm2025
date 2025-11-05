@@ -1,7 +1,6 @@
 # dashboard.py
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 
 # 데이터 불러오기(priva)
 def load_data():
@@ -15,7 +14,7 @@ def load_data():
     return df
 
 def show_dashboard():
-    st.title(':seedling: 온실 환경 관리')
+    st.title(':seedling: 프리바 데이터')
 
     data = load_data()
 
