@@ -20,7 +20,7 @@ def show_alarms():
 
     st.dataframe(df_alarms.style.applymap(color_status, subset=["상태"]))
 
-    st.markdown("#### 알림 상세")
+    st.markdown("### 알림 상세")
     selected = st.selectbox("알림 선택", df_alarms.index)
     if selected is not None:
         st.write("###", df_alarms.loc[selected, "알림 유형"])
