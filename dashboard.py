@@ -1,38 +1,69 @@
-# dashboard.py
 import streamlit as st
 import math
 import requests
+from datetime import datetime, timedelta
 
 def calc_vpd(temp_c, rh):
     svp = 0.6108 * math.exp((17.27 * temp_c) / (temp_c + 237.3))
     vpd = svp * (1 - rh / 100)
     return round(vpd, 3)
 
+def get_weather_kma(nx, ny):
+    service_key = "YOUR_SERVICE_KEY"  # 기상청 API 키
+
+    now = datetime.now() - timedelta(hours=1)
+    base_date = now.strftime("%Y%m%d")
+    base_time = now.strftime("%H00")
+
+    url = (
+        f"http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst"
+        f"?serviceKey={service_key}&numOfRows=60&pageNo=1&dataType=json"
+        f"&base_date={base_date}&base_time={base_time}&nx={nx}&ny={ny}"
+    )
+
+    response = requests.get(url)
+    data = response.json()
+
+    temp = None
+    reh = None
+    if data.get("response") and data["response"]["header"]["resultCode"] == "00":
+        items = data["response"]["body"]["items"]["item"]
+        for item in items:
+            if item["category"] == "T1H":
+                temp = float(item["fcstValue"])
+            elif item["category"] == "REH":
+                reh = float(item["fcstValue"])
+        return temp, reh
+    else:
+        return None, None
+
 def show_dashboard():
     st.title("📈 대시보드")
 
-    # 지역 입력 및 날씨 불러오기
-    region = st.text_input("지역명을 입력하세요", "서울")
+    # 지역명-격자 좌표 사전
+    region_coords = {
+        "서울": (60, 127),
+        "부산": (98, 74),
+        "대구": (89, 90)
+    }
+
+    region = st.selectbox("지역을 선택하세요", list(region_coords.keys()))
+
     if st.button("날씨 불러오기"):
-        # 예시용 가상 값 및 API 호출 구간
-        temp = 25  # 실시간 API로 가져올 값
-        rh = 70    # 실시간 API로 가져올 값
-        st.success(f"현재 온도: {temp}°C, 상대습도: {rh}%")
-    else:
-        temp = 25
-        rh = 70
-
-    # VPD 계산
-    vpd = calc_vpd(temp, rh)
-    st.metric(label="VPD 증기압 결핍", value=f"{vpd} kPa")
-
-    # 이상적 범위 판별, 몰리에 선도 기준 메시지
-    if 0.8 <= vpd <= 1.2:
-        st.success("이상적인 VPD 범위(생육 촉진 구간)입니다.")
-    elif 1.2 < vpd <= 1.5:
-        st.warning("개화단계에 적합한 VPD 범위입니다.")
-    else:
-        st.error("비이상적 VPD입니다. 환경 조정 필요!")
+        nx, ny = region_coords[region]
+        temp, rh = get_weather_kma(nx, ny)
+        if temp is not None and rh is not None:
+            st.success(f"{region} 현재 온도: {temp}°C, 상대습도: {rh}%")
+            vpd = calc_vpd(temp, rh)
+            st.metric(label="VPD 증기압 결핍", value=f"{vpd} kPa")
+            if 0.8 <= vpd <= 1.2:
+                st.success("이상적인 VPD 범위(생육 촉진 구간)입니다.")
+            elif 1.2 < vpd <= 1.5:
+                st.warning("개화단계에 적합한 VPD 범위입니다.")
+            else:
+                st.error("비이상적 VPD입니다. 환경 조정 필요!")
+        else:
+            st.error("기상청 API에서 데이터를 가져오지 못했습니다.")
 
     st.markdown("""
     <details>
@@ -42,3 +73,4 @@ def show_dashboard():
     광합성 최적: VPD 0.45~1.136 kPa
     </details>
     """, unsafe_allow_html=True)
+    st.image("https://example.com/mollier_diagram.png", caption="몰리에 선도")
