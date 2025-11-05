@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import os
+
+DATA_FILENAME = 'mc.csv' if os.getenv('DEPLOY_ENV') == 'web' else 'priva.csv'
 
 # 데이터 불러오기(mc.csv)
 def load_data():
