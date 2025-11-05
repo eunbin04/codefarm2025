@@ -47,9 +47,10 @@ def show_alarms():
     if selected_alert_type:
         selected_row = filtered_df[filtered_df["알림 유형"] == selected_alert_type].iloc[0]
 
-        box_style = """
+        border_color = "#4CAF50" if selected_row["상태"] == "해결됨" else "#FF6347"  
+        box_style = f"""
         <div style="
-            border: 2px solid #4CAF50;  /* 초록색 테두리 */
+            border: 2px solid {border_color};
             padding: 15px;
             border-radius: 10px;
             background-color: #f9f9f9;
@@ -64,14 +65,16 @@ def show_alarms():
         st.markdown(f"**시간:** {selected_row['시간']}")
         st.markdown(f"**상태:** {selected_row['상태']}")
         st.markdown(f"**설명:** {selected_row['설명']}")
-        st.markdown(box_end, unsafe_allow_html=True)
+        
 
-        st.markdown("#### 조치 방법")
         if selected_row["상태"] == "미해결":
+            st.markdown("#### 조치 방법")
             st.write("- 센서 점검 필요")
             st.write("- 시스템 로그 확인")
         else:
             st.write("- 이미 해결된 알림입니다.")
-        st.markdown("---")
 
-        
+        st.markdown(box_end, unsafe_allow_html=True)
+
+
+        st.markdown("---")
