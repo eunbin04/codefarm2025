@@ -54,3 +54,7 @@ def show_dashboard():
         st.line_chart(plot_data)
     else:
         st.warning('적어도 하나 이상의 변수를 선택해 주세요.')
+
+
+if __name__ == "__main__":
+    show_dashboard()

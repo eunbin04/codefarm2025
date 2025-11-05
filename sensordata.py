@@ -64,3 +64,8 @@ def show_sensordata():
     desc = filtered[selected_vars].describe().T[['mean', 'min', 'max']]
     desc.columns = ['평균', '최소', '최대']
     st.table(desc.style.format("{:.2f}"))
+
+
+
+if __name__ == "__main__":
+    show_sensordata()

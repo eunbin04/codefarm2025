@@ -20,9 +20,9 @@ def show_alarms():
         "알림 유형": ["이상치", "결측치", "VPD 경고"],
         "상태": ["해결됨", "미해결", "해결됨"],
         "설명": [
-            "온도 100℃로 감지되어 경고 발생",
-            "습도 센서에서 몇 분동안 결측 발생하여 경고 발생",
-            "적정 VPD 범위 초과함"
+            "온도 100℃ 감지",
+            "습도 센서에서 몇 분동안 결측 발생",
+            "적정 VPD 범위 초과"
         ]
     }
 
@@ -50,3 +50,15 @@ def show_alarms():
         st.write("시간:", selected_row["시간"])
         st.write("상태:", selected_row["상태"])
         st.write("설명:", selected_row["설명"])
+        # 추가적인 상세 정보나 조치 방법 등을 여기에 표시할 수 있습니다.
+        st.markdown("#### 조치 방법")
+        if selected_row["상태"] == "미해결":
+            st.write("- 센서 점검 필요")
+            st.write("- 시스템 로그 확인")
+        else:
+            st.write("- 이미 해결된 알림입니다.")
+        st.markdown("---")
+
+        
+if __name__ == "__main__":
+    show_alarms()
