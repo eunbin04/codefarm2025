@@ -1,6 +1,6 @@
+# alarms.py
 import streamlit as st
 import pandas as pd
-
 
 def color_status(val):
     if val == "해결됨":
@@ -15,7 +15,6 @@ def color_status(val):
 def show_alarms():
     st.title("🚨 알림")
 
-    # 예시 알림 데이터 (시간, 알림 유형, 상태, 설명)
     alarm_data = {
         "시간": ["2025-11-04 08:15", "2025-11-04 09:30", "2025-11-04 10:45"],
         "알림 유형": ["온도 초과", "습도 부족", "CO2 이상"],
@@ -29,7 +28,6 @@ def show_alarms():
 
     df_alarms = pd.DataFrame(alarm_data)
 
-    # 상태별 필터링 셀렉트박스
     status_filter = st.selectbox("알림 상태 선택", options=["전체", "해결됨", "미해결"])
 
     if status_filter == "전체":
@@ -40,12 +38,17 @@ def show_alarms():
     st.dataframe(filtered_df.style.applymap(color_status, subset=["상태"]))
 
     st.markdown("### 알림 상세")
-    if status_filter is not None:
-        st.write("###", filtered_df.loc[status_filter, "알림 유형"])
-        st.write("시간:", filtered_df.loc[status_filter, "시간"])
-        st.write("상태:", filtered_df.loc[status_filter, "상태"])
-        st.write("설명:", filtered_df.loc[status_filter, "설명"])
-        if filtered_df.loc[status_filter, "상태"] == "미해결":
+
+    selected_index = st.selectbox("상세보기 알림 선택", options=filtered_df.index)
+
+    if selected_index is not None:
+        st.write("###", filtered_df.loc[selected_index, "알림 유형"])
+        st.write("시간:", filtered_df.loc[selected_index, "시간"])
+        st.write("상태:", filtered_df.loc[selected_index, "상태"])
+        st.write("설명:", filtered_df.loc[selected_index, "설명"])
+
+        if filtered_df.loc[selected_index, "상태"] == "미해결":
             if st.button("해결됨으로 표시"):
-                filtered_df.at[status_filter, "상태"] = "해결됨"
-                st.success("알림 상태가 '해결됨'으로 업데이트되었습니다.")  
+                df_alarms.at[selected_index, "상태"] = "해결됨"
+                st.success("알림 상태가 '해결됨'으로 업데이트되었습니다.")
+                st.experimental_rerun()
