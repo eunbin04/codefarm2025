@@ -46,33 +46,23 @@ def show_alarms():
 
     if selected_alert_type:
         selected_row = filtered_df[filtered_df["알림 유형"] == selected_alert_type].iloc[0]
-
         border_color = "#4CAF50" if selected_row["상태"] == "해결됨" else "#FF6347"
-        box_style = f"""
-        <div style="
-            border: 2px solid {border_color};
-            padding: 15px;
-            border-radius: 10px;
-            background-color: #f9f9f9;
-            margin-bottom: 20px;
-            ">
-        """
-        box_end = "</div>"
 
-        st.markdown(box_style, unsafe_allow_html=True)
-
-        st.markdown(f"### {selected_row['알림 유형']}")
-        st.markdown(f"**시간:** {selected_row['시간']}")
-        st.markdown(f"**상태:** {selected_row['상태']}")
-        st.markdown(f"**설명:** {selected_row['설명']}")
-
-        if selected_row["상태"] == "미해결":
-            st.markdown("#### 조치 방법")
-            st.write("- 센서 점검 필요")
-            st.write("- 시스템 로그 확인")
-        else:
-            st.write("- 이미 해결된 알림입니다.")
-
-        st.markdown(box_end, unsafe_allow_html=True)
-
-        st.markdown("---")
+        box_html = f"""
+    <div style="
+        border: 2px solid {border_color};
+        padding: 15px;
+        border-radius: 10px;
+        background-color: #f9f9f9;
+        margin-bottom: 20px;
+    ">
+        <h3>{selected_row['알림 유형']}</h3>
+        <b>시간:</b> {selected_row['시간']}<br>
+        <b>상태:</b> {selected_row['상태']}<br>
+        <b>설명:</b> {selected_row['설명']}<br>
+        <ul>
+            {"<li>센서 점검 필요</li><li>시스템 로그 확인</li>" if selected_row["상태"] == "미해결" else "<li>이미 해결된 알림입니다.</li>"}
+        </ul>
+    </div>
+    """
+        st.markdown(box_html, unsafe_allow_html=True)
