@@ -35,7 +35,7 @@ def show_alarms():
     else:
         filtered_df = df_alarms[df_alarms["상태"] == status_filter]
 
-    st.dataframe(filtered_df.style.applymap(color_status, subset=["상태"]))
+    st.dataframe(filtered_df.style.map(color_status, subset=["상태"]))
 
     st.markdown("### 알림 상세")
 
