@@ -42,12 +42,12 @@ def show_alarms():
 
     # 알림 유형을 선택지로 사용
     alert_types = filtered_df["알림 유형"].tolist()
-    selected_alert_type = st.selectbox("상세보기 알림 유형 선택", options=alert_types)
+    selected_alert_type = st.selectbox("알림 유형 선택", options=alert_types)
 
     if selected_alert_type:
         selected_row = filtered_df[filtered_df["알림 유형"] == selected_alert_type].iloc[0]
 
-        border_color = "#4CAF50" if selected_row["상태"] == "해결됨" else "#FF6347"  
+        border_color = "#4CAF50" if selected_row["상태"] == "해결됨" else "#FF6347"
         box_style = f"""
         <div style="
             border: 2px solid {border_color};
@@ -57,15 +57,14 @@ def show_alarms():
             margin-bottom: 20px;
             ">
         """
-
-        
+        box_end = "</div>"
 
         st.markdown(box_style, unsafe_allow_html=True)
+
         st.markdown(f"### {selected_row['알림 유형']}")
         st.markdown(f"**시간:** {selected_row['시간']}")
         st.markdown(f"**상태:** {selected_row['상태']}")
         st.markdown(f"**설명:** {selected_row['설명']}")
-        
 
         if selected_row["상태"] == "미해결":
             st.markdown("#### 조치 방법")
@@ -74,8 +73,6 @@ def show_alarms():
         else:
             st.write("- 이미 해결된 알림입니다.")
 
-        box_end = "</div>"
         st.markdown(box_end, unsafe_allow_html=True)
-
 
         st.markdown("---")
