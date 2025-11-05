@@ -2,10 +2,7 @@ import streamlit as st
 
 def show_home():
     st.title('안녕하세요! 👋')
-    st.write('4조 코드팜입니다.')
-    st.write('⬅️왼쪽 메뉴를 통해 대시보드 페이지로 이동하세요.')
     st.markdown("""
-
     ### 🌱 CODEFARM 소개
     CODEFARM은 스마트 온실 관리 시스템으로, 온실의 환경 데이터를 실시간으로 모니터링하고 분석할 수 있는 플랫폼입니다.  
     온실 내부의 온도, 습도, CO2 농도, 조도 등의 다양한 센서 데이터를 시각화하여 사용자에게 제공합니다.         
