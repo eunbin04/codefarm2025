@@ -29,28 +29,6 @@ def show_settings():
 
     st.markdown("### 현재 설정")
 
-    settings_form = {
-        "농장명": st.session_state['farm_name'],
-        "경고 알림 활성화": st.session_state['alert_enabled'],
-        "데이터 업데이트 주기(분)": st.session_state['update_interval'],
-    }
-
-    table_data = {
-        "설정 항목": [],
-        "값": []
-    }
-
-    for key, value in settings_form.items():
-        # '경고 알림 활성화'는 아이콘으로 표시
-        if key == "경고 알림 활성화":
-            icon = "✔️" if value else "❌"
-            display_value = icon
-        else:
-            display_value = value
-        table_data["설정 항목"].append(key)
-        table_data["값"].append(display_value)
-
-    # 데이터 프레임으로 표 만들기
-    df_settings = pd.DataFrame(table_data)
-    st.dataframe(df_settings)
-
+    st.write(f"농장명: {st.session_state['farm_name']}")
+    st.write(f"경고 알림 활성화: {'✔️' if st.session_state['alert_enabled'] else '❌'}")
+    st.write(f"데이터 업데이트 주기: {st.session_state['update_interval']} 분")
