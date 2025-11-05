@@ -52,6 +52,5 @@ def show_settings():
 
     # 데이터 프레임으로 표 만들기
     df_settings = pd.DataFrame(table_data)
-    df_no_index = df_settings.reset_index(drop=True)
-    st.dataframe(df_no_index)
+    st.dataframe(df_settings.iloc[:, 1:])
 
