@@ -46,7 +46,7 @@ def show_cleandata():
 
     st.markdown("---")
     
-    st.markdown("### 모델 학습 시키기")
+    st.subheader("모델 학습 시키기")
 
     # 수동 실행 버튼
     if st.button("수동 학습 실행"):
@@ -68,7 +68,7 @@ def show_cleandata():
     try:
         with open("outlier_fix/train_log.txt", "r") as f:
             log_content = f.read()
-        st.markdown("### 이전 학습 실행 로그")
+        st.subheader("이전 학습 실행 로그")
         st.text(log_content)
     except FileNotFoundError:
         st.info("아직 실행 로그가 없습니다.")

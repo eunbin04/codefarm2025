@@ -5,6 +5,8 @@ import pandas as pd
 def show_settings():
     st.title("⚙️ 설정")
 
+    st.markdown("---")  
+
     # 기본값 설정 (세션 상태에 없으면 초기값 부여)
     if 'farm_name' not in st.session_state:
         st.session_state['farm_name'] = "CODEFARM 온실"
@@ -27,7 +29,7 @@ def show_settings():
             st.success("설정이 저장되었습니다!")
 
 
-    st.markdown("### 현재 설정")
+    st.subheader("현재 설정")
 
     st.write(f"농장명: {st.session_state['farm_name']}")
     st.write(f"경고 알림 활성화: {'✔️' if st.session_state['alert_enabled'] else '❌'}")

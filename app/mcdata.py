@@ -57,13 +57,13 @@ def show_mcdata():
 
     st.markdown("---")
 
-    st.subheader("💾 데이터 다운로드")
-    csv = filtered[selected_vars].to_csv().encode('utf-8')
-    st.download_button(label="CSV 다운로드", data=csv, file_name='sensor_data.csv', mime='text/csv')
-
-    st.markdown("---")
-
     st.subheader("📊 통계 요약")
     desc = filtered[selected_vars].describe().T[['mean', 'min', 'max']]
     desc.columns = ['평균', '최소', '최대']
     st.table(desc.style.format("{:.2f}"))
+    
+    st.markdown("---")
+
+    st.subheader("💾 데이터 다운로드")
+    csv = filtered[selected_vars].to_csv().encode('utf-8')
+    st.download_button(label="CSV 다운로드", data=csv, file_name='sensor_data.csv', mime='text/csv')

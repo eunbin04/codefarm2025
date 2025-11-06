@@ -13,7 +13,7 @@ def show_vpd():
 
     st.markdown("---")
 
-    st.markdown("### VPD 계산기")
+    st.subheader("VPD 계산기")
 
     temp = st.number_input("🔥 온도 (°C)", min_value=-10.0, max_value=40.0, value=25.0, step=1.0)
     rh = st.number_input("💧 상대습도 (%)", min_value=0.0, max_value=100.0, value=70.0, step=1.0)

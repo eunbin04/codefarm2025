@@ -4,7 +4,7 @@ from outlier_solution.call_api import fetch_asos_daily, STN_ID, START_DATE, END_
 
 
 def show_weather():
-    st.title(':cloud: 기상청 ASOS 일자료')
+    st.title('⛅ 기상 정보')
 
     st.markdown("---")
 
@@ -16,8 +16,8 @@ def show_weather():
         service_key=SERVICE_KEY
     )
 
-    st.subheader("기상청 ASOS 일자료 미리보기")
-    st.dataframe(weather_data.head())
+    st.subheader("일자료 데이터")
+    st.dataframe(weather_data())
 
     st.subheader("💾 데이터 다운로드")
     csv = weather_data.to_csv(index=False).encode('utf-8-sig')

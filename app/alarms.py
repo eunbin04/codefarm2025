@@ -60,7 +60,7 @@ def show_alarms():
 
     st.dataframe(filtered_df.style.map(color_status, subset=["상태"]))
 
-    st.markdown("### 알림 상세")
+    st.subheader("알림 상세")
 
     alert_times = filtered_df["시간"].tolist()
     selected_alert_time = st.selectbox("항목 선택", options=alert_times)
