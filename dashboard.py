@@ -43,5 +43,6 @@ def show_vpd():
 
 
 def show_period():
-    st.title("📈 대시보드 - 기간별 데이터")
-    st.markdown("기간별 데이터 시각화 및 분석 기능은 현재 개발 중에 있습니다. 곧 업데이트될 예정이니 기대해 주세요!")
+    st.title("📈 대시보드")
+    
+    st.markdown("### 기간별 데이터")
