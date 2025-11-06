@@ -8,9 +8,10 @@ def show_weather():
     st.markdown("---")
 
     today = datetime.date.today()
+    one_month_ago = today - datetime.timedelta(days=30)
     selected_dates = st.date_input(
         "기간 선택",
-        value=(today)
+        value=(one_month_ago, today)
     )
     if isinstance(selected_dates, tuple):
         start_date, end_date = selected_dates
