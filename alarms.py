@@ -9,7 +9,7 @@ def color_status(val):
     elif val == "미해결":
         color = "lightcoral"
     elif val == "센서 오류":
-        color = "lightyellow"
+        color = "#FFD700"
     else:
         color = ""
     return f"background-color: {color}"
@@ -66,7 +66,7 @@ def show_alarms():
         selected_index = df_alarms[df_alarms["시간"] == selected_alert_time].index[0]
         selected_row = df_alarms.loc[selected_index]
 
-        border_color = "#4CAF50" if selected_row["상태"] == "해결됨" else ("#FFEB3B" if selected_row["상태"] == "센서 오류" else "#FF6347")
+        border_color = "#4CAF50" if selected_row["상태"] == "해결됨" else ("#FFD700" if selected_row["상태"] == "센서 오류" else "#FF6347")
 
         st.markdown(f"""
         <div style="
