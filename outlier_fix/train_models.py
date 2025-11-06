@@ -56,48 +56,48 @@ model_dir = "outlier_fix/trained_models"
 os.makedirs("outlier_fix/trained_models", exist_ok=True)
 
 
-for target_col in target_list:
-    #print(f"\n===== {target_col} 모델 학습 시작 =====")
-
-    # --- 3. X (특징) / y (타겟) 정의 ---
-    features = [col for col in df.columns if col not in ['Timestamp', target_col]]
-
-    X_train = df_train_full[features]
-    y_train = df_train_full[target_col]
-
-    # --- 4. LightGBM 모델 훈련 ---
-    X_train_sub, X_val, y_train_sub, y_val = train_test_split(
-        X_train, y_train, test_size=0.2, shuffle=False, random_state=42
-    )
-
-    model = lgb.LGBMRegressor(
-        objective='regression',
-        metric='rmse',
-        n_estimators=1000,
-        random_state=42,
-        learning_rate=0.05
-    )
-
-    model.fit(
-        X_train_sub,
-        y_train_sub,
-        eval_set=[(X_val, y_val)],
-        eval_metric='rmse',
-        callbacks=[lgb.early_stopping(50, verbose=False)]  # 로그 숨기기
-    )
-
-    #print(f"최적 트리 개수: {model.best_iteration_}")
-
 def train_models():
-    
-    # (추가) 모델을 파일로 저장
-    for target_col in target_list:  
-        # ... (모델 학습 코드 생략)
-        model_filename = f'{model_dir}/model_{target_col}.pkl'
-        joblib.dump(model, model_filename)
-        #print(f"===== {target_col} 모델 저장 완료 ({model_filename}) =====")
+    for target_col in target_list:
+        #print(f"\n===== {target_col} 모델 학습 시작 =====")
 
-# print("\n--- 모든 모델 학습 및 저장 완료 ---")
+        # --- 3. X (특징) / y (타겟) 정의 ---
+        features = [col for col in df.columns if col not in ['Timestamp', target_col]]
+
+        X_train = df_train_full[features]
+        y_train = df_train_full[target_col]
+
+        # --- 4. LightGBM 모델 훈련 ---
+        X_train_sub, X_val, y_train_sub, y_val = train_test_split(
+            X_train, y_train, test_size=0.2, shuffle=False, random_state=42
+        )
+
+        model = lgb.LGBMRegressor(
+            objective='regression',
+            metric='rmse',
+            n_estimators=1000,
+            random_state=42,
+            learning_rate=0.05
+        )
+
+        model.fit(
+            X_train_sub,
+            y_train_sub,
+            eval_set=[(X_val, y_val)],
+            eval_metric='rmse',
+            callbacks=[lgb.early_stopping(50, verbose=False)]  # 로그 숨기기
+        )
+
+        #print(f"최적 트리 개수: {model.best_iteration_}")
+
+        
+        # (추가) 모델을 파일로 저장
+        for target_col in target_list:  
+            # ... (모델 학습 코드 생략)
+            model_filename = f'{model_dir}/model_{target_col}.pkl'
+            joblib.dump(model, model_filename)
+            #print(f"===== {target_col} 모델 저장 완료 ({model_filename}) =====")
+
+    # print("\n--- 모든 모델 학습 및 저장 완료 ---")
 
 if __name__ == "__main__":
     train_models()
