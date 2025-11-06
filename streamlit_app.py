@@ -19,23 +19,26 @@ def sidebar_footer():
     st.sidebar.markdown("<strong>개발자<strong/>", unsafe_allow_html=True)
     st.sidebar.markdown("김유경<br>박은빈<br>박주영<br>신예은<br>우가연", unsafe_allow_html=True)
 
-if main_page == '🏠홈':
-    show_home()
-elif main_page == '📈대시보드':
-    dashboard_sub = st.sidebar.radio('', ['기간별 데이터', 'VPD 데이터'])
+main_page = st.sidebar.selectbox('메뉴 선택', ['🏠홈', '📈대시보드', '🌿모니터링', '🚨알림', '⚙️설정'], index=0)
+
+if main_page == '📈대시보드':
+    dashboard_sub = st.sidebar.selectbox('대시보드 세부', ['기간별 데이터', 'VPD 데이터'], index=0)
     if dashboard_sub == 'VPD 데이터':
         show_vpd()
-    elif dashboard_sub == '기간별 데이터':
+    else:
         show_period()
 elif main_page == '🌿모니터링':
-    monitoring_sub = st.sidebar.radio('', ['미기후 정보', '배지 정보'])
+    monitoring_sub = st.sidebar.selectbox('모니터링 세부', ['미기후 정보', '배지 정보'], index=0)
     if monitoring_sub == '미기후 정보':
         show_mcdata()
-    elif monitoring_sub == '배지 정보':
+    else:
         show_mediadata()
+elif main_page == '🏠홈':
+    show_home()
 elif main_page == '🚨알림':
     show_alarms()
 elif main_page == '⚙️설정':
     show_settings()
+
 
 sidebar_footer()
