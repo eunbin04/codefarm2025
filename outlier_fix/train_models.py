@@ -4,12 +4,12 @@ import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 import joblib
 
-file_name = 'data.xlsx' ########################
+file_name = 'data/mc.csv' ########################
 
 # --- 0. 엑셀 파일 불러오기 및 전처리 ---
 use_cols = [0, 1, 3, 4]     ##########사용자에게 위치값을 받아와야 함
 try:
-    df = pd.read_excel(file_name, header=0, usecols=use_cols)
+    df = pd.read_csv(file_name, header=0, usecols=use_cols)
     df.columns = ['Timestamp', 'Temperature', 'Humidity', 'Solar_Radiation']
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
     df['Temperature'] = pd.to_numeric(df['Temperature'], errors='coerce')
@@ -49,6 +49,8 @@ target_list = ['Temperature', 'Humidity', 'Solar_Radiation']
 # 맨 마지막 결측치 행(테스트용)이 있다면 확실히 제거합니다.
 df_train_full = df.dropna(subset=target_list)
 
+model_dir = "trained_models"
+
 for target_col in target_list:
     #print(f"\n===== {target_col} 모델 학습 시작 =====")
 
@@ -82,8 +84,10 @@ for target_col in target_list:
     #print(f"최적 트리 개수: {model.best_iteration_}")
 
     # (추가) 모델을 파일로 저장
-    model_filename = f'model_{target_col}.pkl'
-    joblib.dump(model, model_filename)
-    #print(f"===== {target_col} 모델 저장 완료 ({model_filename}) =====")
+    for target_col in target_list:  
+        # ... (모델 학습 코드 생략)
+        model_filename = f'{model_dir}/model_{target_col}.pkl'
+        joblib.dump(model, model_filename)
+        #print(f"===== {target_col} 모델 저장 완료 ({model_filename}) =====")
 
 print("\n--- 모든 모델 학습 및 저장 완료 ---")
