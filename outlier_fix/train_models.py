@@ -3,6 +3,7 @@ import pandas as pd
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 import joblib
+import os
 
 file_name = 'data/mc.csv' ########################
 
@@ -49,7 +50,10 @@ target_list = ['Temperature', 'Humidity', 'Solar_Radiation']
 # 맨 마지막 결측치 행(테스트용)이 있다면 확실히 제거합니다.
 df_train_full = df.dropna(subset=target_list)
 
-model_dir = "trained_models"
+
+model_dir = "outlier_fix/trained_models"
+os.makedirs("outlier_fix/trained_models", exist_ok=True)
+
 
 for target_col in target_list:
     #print(f"\n===== {target_col} 모델 학습 시작 =====")

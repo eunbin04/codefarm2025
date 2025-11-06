@@ -1,10 +1,12 @@
 # streamlit_app.py
 import streamlit as st
-from home import show_home
-from dashboard import show_vpd, show_period
-from sensordata import show_mcdata, show_mediadata
-from alarms import show_alarms
-from settings import show_settings
+from pages.home import show_home
+from pages.vpd import show_vpd
+from pages.cleandata import show_cleandata
+from pages.mcdata import show_mcdata
+from pages.mediadata import show_mediadata
+from pages.alarms import show_alarms
+from pages.settings import show_settings
 
 
 st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
@@ -36,8 +38,8 @@ if st.sidebar.button('🏠 홈'):
     set_page('홈')
 
 with st.sidebar.expander("📈 대시보드", expanded=True):
-    if st.button('기간별 데이터'):
-        set_page('기간별 데이터')
+    if st.button('클린 데이터'):
+        set_page('클린 데이터')
     if st.button('VPD 데이터'):
         set_page('VPD 데이터')
 
@@ -56,8 +58,8 @@ if st.sidebar.button('⚙️ 설정'):
 # 페이지별 화면 표시
 if st.session_state.page == '홈':
     show_home()
-elif st.session_state.page == '기간별 데이터':
-    show_period()
+elif st.session_state.page == '클린 데이터':
+    show_cleandata()
 elif st.session_state.page == 'VPD 데이터':
     show_vpd()
 elif st.session_state.page == '미기후 정보':
