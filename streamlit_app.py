@@ -11,8 +11,6 @@ st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
 st.sidebar.title('메뉴')
 
-main_page = st.sidebar.radio('', ['🏠홈', '📈대시보드', '🌿모니터링', '🚨알림', '⚙️설정'])
-
 def sidebar_footer():
     st.sidebar.markdown("---")
     st.sidebar.markdown("© 2025 CODEFARM")
