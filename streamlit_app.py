@@ -1,4 +1,5 @@
 # streamlit_app.py
+import streamlit as st
 from app.home import show_home
 from app.vpd import show_vpd
 from app.cleandata import show_cleandata
