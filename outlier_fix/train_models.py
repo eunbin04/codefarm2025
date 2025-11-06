@@ -90,4 +90,4 @@ for target_col in target_list:
         joblib.dump(model, model_filename)
         #print(f"===== {target_col} 모델 저장 완료 ({model_filename}) =====")
 
-print("\n--- 모든 모델 학습 및 저장 완료 ---")
+# print("\n--- 모든 모델 학습 및 저장 완료 ---")

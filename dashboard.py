@@ -46,7 +46,8 @@ def show_vpd():
 
 def show_period():
     st.title("📈 대시보드")
-    st.markdown("### 학습 모델 저장 이력 보기")
+    
+    st.markdown("### 모델 학습 이력 보기")
 
     # 실행 버튼 만들기
     if st.button("모델 학습 코드 실행"):
