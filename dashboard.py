@@ -37,8 +37,7 @@ def show_dashboard():
     <details>
     <summary><b>몰리에 선도 설명</b></summary>
     - SVP(포화수증기압) = 0.6108 × exp((17.27 × T) / (T + 237.3))<br>
-    - VPD = SVP × (1 - RH / 100)<br>
-    T: 온도(°C), RH: 상대습도(%)
+    - VPD = SVP × (1 - RH / 100)
     </details>
     """, unsafe_allow_html=True)
 
