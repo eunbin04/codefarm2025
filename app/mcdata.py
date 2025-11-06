@@ -25,6 +25,8 @@ def load_mcdata(limit_recent_day=True):
 def show_mcdata():
     st.title(':seedling: 미기후 정보')
 
+    st.markdown("---")
+
     data = load_mcdata(limit_recent_day=True)
 
     min_time = data.index.min().to_pydatetime()

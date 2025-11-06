@@ -18,6 +18,8 @@ def color_status(val):
 def show_alarms():
     st.title("🚨 알림")
 
+    st.markdown("---")
+
     alarm_types = ["이상치", "결측치", "VPD 경고"]
     states = ["해결됨", "미해결"]
     descriptions = {

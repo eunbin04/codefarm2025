@@ -27,6 +27,8 @@ def load_mediadata(limit_recent_day=True):
 def show_mediadata():
     st.title(':seedling: 배지 정보')
 
+    st.markdown("---")
+
     data = load_mediadata(limit_recent_day=True)
 
     min_time = data.index.min().to_pydatetime()

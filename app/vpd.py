@@ -11,6 +11,8 @@ def calc_vpd(temp_c, rh):
 def show_vpd():
     st.title("📈 대시보드")
 
+    st.markdown("---")
+
     st.markdown("### VPD 계산기")
 
     temp = st.number_input("🔥 온도 (°C)", min_value=-10.0, max_value=40.0, value=25.0, step=1.0)

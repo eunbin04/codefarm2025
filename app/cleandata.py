@@ -43,6 +43,9 @@ def stop_scheduler():
 
 def show_cleandata():
     st.title("📈 대시보드")
+
+    st.markdown("---")
+    
     st.markdown("### 모델 학습 시키기")
 
     # 수동 실행 버튼
