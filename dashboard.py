@@ -26,10 +26,14 @@ def show_dashboard():
 
     st.markdown("""
     <details>
-    <summary><b>몰리에 선도 설명</b></summary>
-    식물의 생장 최적 구간 설명<br>
-    ex) 개화단계 적합: VPD 1.2~1.5 kPa<br>
-    ex) 광합성 최적: VPD 0.45~1.136 kPa
+    <summary><b>식물의 생장 단계별 VPD 최적 구간</b></summary><br>
+                
+    클론, 뿌리 형성 단계: 0.8 kPa<br>
+
+    영양 생장: VPD 1.0 kPa<br>
+
+    생식생장: VPD 1.2~1.5 kPa
+
     </details>
     """, unsafe_allow_html=True)
 
