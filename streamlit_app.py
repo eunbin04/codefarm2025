@@ -11,7 +11,7 @@ st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
 st.sidebar.title('메뉴')
 
-# 상태 저장용 (세션 상태 초기화)
+# 세션 상태 초기화
 if 'page' not in st.session_state:
     st.session_state.page = '홈'  
 
@@ -31,7 +31,7 @@ button_style = """
     """
 st.sidebar.markdown(button_style, unsafe_allow_html=True)
 
-# 메인 메뉴 버튼
+
 if st.sidebar.button('🏠 홈'):
     set_page('홈')
 
@@ -53,7 +53,7 @@ if st.sidebar.button('🚨 알림'):
 if st.sidebar.button('⚙️ 설정'):
     set_page('설정')
 
-# 페이지 상태에 따른 페이지 호출
+# 페이지별 화면 표시
 if st.session_state.page == '홈':
     show_home()
 elif st.session_state.page == '기간별 데이터':
@@ -68,7 +68,6 @@ elif st.session_state.page == '알림':
     show_alarms()
 elif st.session_state.page == '설정':
     show_settings()
-
 
 
 st.sidebar.markdown("---")
