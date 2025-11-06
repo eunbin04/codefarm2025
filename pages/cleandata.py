@@ -1,7 +1,7 @@
 # cleandata.py
 import streamlit as st
-import subprocess
 import datetime as datetime
+from outlier_fix.train_models import train_models
 
 def show_cleandata():
     st.title("📈 대시보드")
@@ -9,27 +9,15 @@ def show_cleandata():
     st.markdown("### 모델 학습 이력 보기")
 
     # 실행 버튼 만들기
-    if st.button("모델 학습 코드 실행"):
+    if st.button("모델 학습 실행"):
         with st.spinner("모델 학습 중... 잠시만 기다려주세요"):
-            # 외부 스크립트 실행 (경로는 실제 상황에 맞게 조절)
-            result = subprocess.run(
-                ["python3", "outlier_fix/train_models.py"],
-                capture_output=True,
-                text=True
-            )
+            result = train_models()
+        st.success("모델 학습이 완료되었습니다!")
+        # 학습 로그 파일 저장
+        with open("outlier_fix/train_log.txt", "w") as f:
+            f.write(f"모델 학습이 완료된 시간: {datetime.datetime.now()}\n") 
 
-            # 출력 결과 보여주기
-            if result.returncode == 0:
-                st.success("모델 학습 및 저장 완료!")
-                st.text(result.stdout)
-                st.text(result.stderr)
-            else:
-                st.error("학습 실행 중 오류 발생!")
-                st.text(result.stdout)
-                st.text(result.stderr)
-
-    # 실행 이력(예: 로그파일이나 DB 기반)을 여기서 불러와 보여주기 (예시)
-    # 이 예시는 파일에 쌓인 학습 로그를 보여주는 구조입니다.
+    # 파일에 쌓인 학습 로그
     try:
         with open("outlier_fix/train_log.txt", "r") as f:
             log_content = f.read()

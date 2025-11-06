@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 import joblib
 import os
 
+
 file_name = 'data/mc.csv' ########################
 
 # --- 0. 엑셀 파일 불러오기 및 전처리 ---
@@ -87,6 +88,8 @@ for target_col in target_list:
 
     #print(f"최적 트리 개수: {model.best_iteration_}")
 
+def train_models():
+    
     # (추가) 모델을 파일로 저장
     for target_col in target_list:  
         # ... (모델 학습 코드 생략)
@@ -95,3 +98,6 @@ for target_col in target_list:
         #print(f"===== {target_col} 모델 저장 완료 ({model_filename}) =====")
 
 # print("\n--- 모든 모델 학습 및 저장 완료 ---")
+
+if __name__ == "__main__":
+    train_models()
