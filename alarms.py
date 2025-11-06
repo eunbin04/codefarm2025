@@ -33,6 +33,8 @@ def show_alarms():
         "설명": []
     }
 
+    random.seed(42)
+    
     for i in range(10):
         alarm_type = random.choice(alarm_types)
         state = random.choice(states)
