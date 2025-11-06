@@ -6,7 +6,7 @@ def calc_vpd(temp_c, rh):
     vpd = svp * (1 - rh / 100)
     return round(vpd, 3)
 
-def show_dashboard():
+def show_vpd():
     st.title("📈 대시보드")
 
     st.markdown("### VPD 계산기")

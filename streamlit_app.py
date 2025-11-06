@@ -1,30 +1,41 @@
 # streamlit_app.py
 import streamlit as st
 from home import show_home
-from dashboard import show_dashboard
+from dashboard import show_vpd, show_period
+from sensordata import show_mcdata, show_mediadata
 from alarms import show_alarms
-from sensordata import show_sensordata
 from settings import show_settings
+
 
 st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
 st.sidebar.title('메뉴')
-page = st.sidebar.radio('페이지 선택', ['🏠홈', '📈대시보드', '🌿온실 환경 관리', '🚨알림', '⚙️설정'])
 
-if page == '🏠홈':
+main_page = st.sidebar.radio('', ['🏠홈', '📈대시보드', '🌿모니터링', '🚨알림', '⚙️설정'])
+
+def sidebar_footer():
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("© 2025 CODEFARM")
+    st.sidebar.markdown("<strong>개발자<strong/>", unsafe_allow_html=True)
+    st.sidebar.markdown("김유경<br>박은빈<br>박주영<br>신예은<br>우가연", unsafe_allow_html=True)
+
+if main_page == '🏠홈':
     show_home()
-elif page == '📈대시보드':
-    show_dashboard()
-elif page == '🌿온실 환경 관리':
-    show_sensordata()
-elif page == '🚨알림':
+elif main_page == '📈대시보드':
+    dashboard_sub = st.sidebar.radio('', ['기간별 데이터', 'VPD 데이터'])
+    if dashboard_sub == 'VPD 데이터':
+        show_vpd()
+    elif dashboard_sub == '기간별 데이터':
+        show_period()
+elif main_page == '🌿모니터링':
+    monitoring_sub = st.sidebar.radio('', ['미기후 정보', '배지 정보'])
+    if monitoring_sub == '미기후 정보':
+        show_mcdata()
+    elif monitoring_sub == '배지 정보':
+        show_mediadata()
+elif main_page == '🚨알림':
     show_alarms()
-elif page == '⚙️설정':
+elif main_page == '⚙️설정':
     show_settings()
-    
 
-
-st.sidebar.markdown("---")  
-st.sidebar.markdown("© 2025 CODEFARM")
-st.sidebar.markdown("<strong>개발자<strong/>", unsafe_allow_html=True)
-st.sidebar.markdown("김유경<br>박은빈<br>박주영<br>신예은<br>우가연", unsafe_allow_html=True)
+sidebar_footer()

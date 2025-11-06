@@ -5,7 +5,7 @@ from datetime import timedelta
 
 # 데이터 불러오기(mc.csv)
 def load_data(limit_recent_day=True):
-    df = pd.read_csv('mc.csv', encoding='utf-8')
+    df = pd.read_csv('data/mc.csv', encoding='utf-8')
     df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
     df.set_index('Timestamp', inplace=True)
@@ -22,7 +22,7 @@ def load_data(limit_recent_day=True):
     return df
 
 
-def show_sensordata():
+def show_mcdata():
     st.title(':seedling: 온실 환경 관리')
 
     data = load_data(limit_recent_day=True)
