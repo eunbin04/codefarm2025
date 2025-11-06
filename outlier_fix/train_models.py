@@ -98,3 +98,6 @@ def train_model():
             #print(f"===== {target_col} 모델 저장 완료 ({model_filename}) =====")
 
     # print("\n--- 모든 모델 학습 및 저장 완료 ---")
+
+if __name__ == "__main__":
+    train_model()
