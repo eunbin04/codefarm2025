@@ -1,12 +1,12 @@
 # streamlit_app.py
 import streamlit as st
-from pages.home import show_home
-from pages.vpd import show_vpd
-from pages.cleandata import show_cleandata
-from pages.mcdata import show_mcdata
-from pages.mediadata import show_mediadata
-from pages.alarms import show_alarms
-from pages.settings import show_settings
+from home import show_home
+from vpd import show_vpd
+from cleandata import show_cleandata
+from mcdata import show_mcdata
+from mediadata import show_mediadata
+from alarms import show_alarms
+from settings import show_settings
 
 
 st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')

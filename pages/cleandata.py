@@ -15,7 +15,7 @@ def show_cleandata():
         st.success("모델 학습이 완료되었습니다!")
         # 학습 로그 파일 저장
         with open("outlier_fix/train_log.txt", "w") as f:
-            f.write(f"모델 학습이 완료된 시간: {datetime.datetime.now()}\n") 
+            f.write(f"{datetime.datetime.now()}\n") 
 
     # 파일에 쌓인 학습 로그
     try:
