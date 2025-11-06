@@ -61,7 +61,7 @@ def show_alarms():
     st.markdown("### 알림 상세")
 
     alert_times = filtered_df["시간"].tolist()
-    selected_alert_time = st.selectbox("알림 시간 선택", options=alert_times)
+    selected_alert_time = st.selectbox("항목 선택", options=alert_times)
 
     if selected_alert_time:
         selected_index = df_alarms[df_alarms["시간"] == selected_alert_time].index[0]
@@ -108,6 +108,7 @@ def show_alarms():
                     st.session_state.alarm_data.at[selected_index, "상태"] = "센서 오류"
                 if st.session_state.sensor_error_clicked:
                     st.success("상태가 저장되었습니다!")
+                    st.experimental_rerun()
 
             with col2:
                 if st.button("해결 완료", key="resolved"):
@@ -116,6 +117,7 @@ def show_alarms():
                     st.session_state.alarm_data.at[selected_index, "상태"] = "해결됨"
                 if st.session_state.resolved_clicked:
                     st.success("상태가 저장되었습니다!")
+                    st.experimental_rerun()
 
 
 
