@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import random
 from datetime import datetime, timedelta
+import time as time
 
 def color_status(val):
     if val == "해결됨":
@@ -107,8 +108,10 @@ def show_alarms():
                     st.session_state.resolved_clicked = False
                     st.session_state.alarm_data.at[selected_index, "상태"] = "센서 오류"
                 if st.session_state.sensor_error_clicked:
-                    st.success("상태가 저장되었습니다!")
-                    st.experimental_rerun()
+                    msg_placeholder = st.empty()
+                    msg_placeholder.success("상태가 저장되었습니다!")
+                    time.sleep(3)
+                    msg_placeholder.empty()
 
             with col2:
                 if st.button("해결 완료", key="resolved"):
@@ -116,8 +119,12 @@ def show_alarms():
                     st.session_state.sensor_error_clicked = False
                     st.session_state.alarm_data.at[selected_index, "상태"] = "해결됨"
                 if st.session_state.resolved_clicked:
-                    st.success("상태가 저장되었습니다!")
-                    st.experimental_rerun()
+                    msg_placeholder = st.empty()
+                    msg_placeholder.success("상태가 저장되었습니다!")
+                    time.sleep(3)
+                    msg_placeholder.empty()
+
+            
 
 
 
