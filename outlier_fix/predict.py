@@ -2,8 +2,13 @@ import pandas as pd
 import lightgbm as lgb  # lgb.LGBMRegressor를 로드하기 위해 필요
 import joblib
 import openpyxl
+import shutil
 
 file_name = 'data.xlsx'###############
+original_file = 'original.xlsx'
+
+#file_name 파일을 original_file로 복사
+shutil.copy(file_name, original_file)
 
 # --- 0. 엑셀 파일 불러오기 및 전처리 ---
 use_cols = [0, 1, 3, 4] ############사용자에게 위치값 받아와야 함
