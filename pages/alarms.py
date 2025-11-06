@@ -95,8 +95,15 @@ def show_alarms():
         col1, col2 = st.columns(2)
         if selected_row["상태"] == "미해결":
             with col1:
-                if st.button("센서 오류로 변경", key="sensor_error"):
+                if st.button("센서 오류", key="sensor_error"):
                     st.session_state.alarm_data.at[selected_index, "상태"] = "센서 오류"
             with col2:
                 if st.button("해결 완료", key="resolved"):
                     st.session_state.alarm_data.at[selected_index, "상태"] = "해결됨"
+                    if submitted:
+                        st.success("설정이 저장되었습니다!")
+
+
+        submitted = st.form_submit_button("저장")
+
+
