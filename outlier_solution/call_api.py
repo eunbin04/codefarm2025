@@ -43,7 +43,7 @@ def fetch_asos_daily(stn_id, start_date, end_date, service_key):
 
     # 4) 호출
     resp = requests.get(url, params=params)
-    print("HTTP 상태 코드:", resp.status_code)
+    # print("HTTP 상태 코드:", resp.status_code)
     resp.raise_for_status()
 
     js = resp.json()
@@ -79,9 +79,9 @@ def api_test_call():
         service_key=SERVICE_KEY
     )
 
-    print("=== [API 테스트] 기상청 ASOS 일자료 ===")
-    print(df_weather.head())
-    print("행 개수:", len(df_weather))
+    # print("=== [API 테스트] 기상청 ASOS 일자료 ===")
+    # print(df_weather.head())
+    # print("행 개수:", len(df_weather))
 
 
 # ===== 2. 생육데이터 → 일별 평균 기온으로 정리 =====
@@ -131,7 +131,7 @@ def run_full_pipeline():
         end_date=END_DATE,
         service_key=SERVICE_KEY
     )
-    print("\n[1] 기상청 데이터 (앞부분):")
+    # print("\n[1] 기상청 데이터 (앞부분):")
     print(df_weather.head())
 
     # 2) 생육데이터 CSV 읽어서 일별 평균 만들기
@@ -141,7 +141,7 @@ def run_full_pipeline():
         datetime_col=DATETIME_COL,
         temp_col=TEMP_COL
     )
-    print("\n[2] 생육데이터 일별 평균 (앞부분):")
+    # print("\n[2] 생육데이터 일별 평균 (앞부분):")
     print(df_growth_daily.head())
 
     # 3) 기온 비교 + 이상치 찾기
@@ -151,19 +151,19 @@ def run_full_pipeline():
         diff_threshold=TEMP_DIFF_THRESHOLD
     )
 
-    print("\n[3] 기상청 vs 생육데이터 매칭 결과 (앞부분):")
+    # print("\n[3] 기상청 vs 생육데이터 매칭 결과 (앞부분):")
     print(df_all.head())
 
-    print(f"\n[4] 기온 차이가 {TEMP_DIFF_THRESHOLD}℃ 이상인 날들:")
+    # print(f"\n[4] 기온 차이가 {TEMP_DIFF_THRESHOLD}℃ 이상인 날들:")
     if df_outliers.empty:
         print("➡ 기준 이상으로 차이 나는 날이 없습니다.")
     else:
         print(df_outliers[["date", "sunshine", "temp_api", "temp_my", "temp_diff"]])
 
     # 4) CSV 저장 (선택)
-    df_all.to_csv("asos_growth_compare_all.csv", index=False)
-    df_outliers.to_csv("asos_growth_outliers.csv", index=False)
-    print("\n[5] 결과 저장 완료: asos_growth_compare_all.csv, asos_growth_outliers.csv")
+    df_all.to_csv("outlier_solution/solutions/asos_growth_compare_all.csv", index=False)
+    df_outliers.to_csv("outlier_solution/solutions/asos_growth_outliers.csv", index=False)
+    # print("\n[5] 결과 저장 완료: asos_growth_compare_all.csv, asos_growth_outliers.csv")
 
 
 if __name__ == "__main__":
