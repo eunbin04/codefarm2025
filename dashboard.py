@@ -26,7 +26,7 @@ def show_dashboard():
 
     st.markdown("""
     <details>
-    <summary><b>식물의 생장 단계별 VPD 최적 구간</b></summary><br
+    <summary><b>식물의 생장 단계별 VPD 최적 구간</b></summary><br>
     클론, 뿌리 형성 단계: 0.8 kPa<br>
     영양 생장: VPD 1.0 kPa<br>
     생식생장: VPD 1.2~1.5 kPa
