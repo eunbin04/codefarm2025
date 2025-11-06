@@ -12,13 +12,13 @@ def show_weather():
     today = datetime.date.today()
     one_month_ago = today - datetime.timedelta(days=30)
     
-    # 날짜 선택 위젯 (범위 선택)
-    start_date, end_date = st.date_input(
-        "조회할 날짜 범위 선택", 
-        value=(one_month_ago, today),
-        min_value=datetime.date(2000, 1, 1),   # 필요에 따라 조정
-        max_value=today
-    )
+    selected_dates = st.date_input("기간 선택", value=(one_month_ago, today))
+
+    if isinstance(selected_dates, tuple):
+        start_date, end_date = selected_dates
+    else:
+        start_date = end_date = selected_dates
+
     
     # 기상청 API 호출
     if start_date > end_date:
@@ -35,7 +35,7 @@ def show_weather():
         
         csv = weather_data.to_csv(index=False).encode('utf-8-sig')
         st.download_button(
-            label="💾 CSV 파일",
+            label=":material/download: CSV 파일",
             data=csv,
             file_name='asos_daily_data.csv',
             mime='text/csv'
