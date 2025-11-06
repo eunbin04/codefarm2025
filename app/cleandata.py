@@ -5,14 +5,13 @@ import schedule
 import threading
 import time
 
-scheduler_running = False  # 자동 실행 상태 변수
+scheduler_running = False  
 scheduler_thread = None   # 백그라운드 스레드 객체
 
 def job():
     train_model()
     with open("outlier_fix/train_log.txt", "a") as f:
         f.write(f"{datetime.datetime.now()}\n")
-    # st.success("자동 학습이 완료되었습니다!")  # 로그 기록만, 반복적 메시지 방지
 
 def run_scheduler():
     while scheduler_running:
@@ -26,7 +25,11 @@ def start_scheduler():
         return
     scheduler_running = True
     schedule.clear()
+    
     schedule.every(1).minutes.do(job)
+    # schedule.every(24).hours.do(job)   # 24시간마다 실행
+    # schedule.every().day.at("01:00").do(job)   # 매일 새벽 1시에 실행
+
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     st.success("자동 학습이 시작되었습니다! (1분마다 반복)")
@@ -36,6 +39,7 @@ def stop_scheduler():
     scheduler_running = False
     schedule.clear()
     st.success("자동 학습이 중지되었습니다.")
+
 
 def show_cleandata():
     st.title("📈 대시보드")
