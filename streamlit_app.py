@@ -1,8 +1,9 @@
 # streamlit_app.py
 import streamlit as st
 from app.home import show_home
-from app.vpd import show_vpd
 from app.cleandata import show_cleandata
+from app.vpd import show_vpd
+from app.weather import show_weather
 from app.mcdata import show_mcdata
 from app.mediadata import show_mediadata
 from app.alarms import show_alarms
@@ -44,6 +45,8 @@ with st.sidebar.expander("📈 대시보드", expanded=True):
         set_page('VPD 데이터')
 
 with st.sidebar.expander("🌿 모니터링", expanded=True):
+    if st.button('기상 정보'):
+        set_page('기상 정보')
     if st.button('미기후 정보'):
         set_page('미기후 정보')
     if st.button('배지 정보'):
@@ -62,6 +65,8 @@ elif st.session_state.page == '클린 데이터':
     show_cleandata()
 elif st.session_state.page == 'VPD 데이터':
     show_vpd()
+elif st.session_state.page == '기상 정보':
+    show_weather()
 elif st.session_state.page == '미기후 정보':
     show_mcdata()
 elif st.session_state.page == '배지 정보':
