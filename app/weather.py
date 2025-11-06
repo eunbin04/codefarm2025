@@ -17,7 +17,7 @@ def show_weather():
     )
 
     st.subheader("일자료 데이터")
-    st.dataframe(weather_data())
+    st.dataframe(weather_data)
 
     st.subheader("💾 데이터 다운로드")
     csv = weather_data.to_csv(index=False).encode('utf-8-sig')
