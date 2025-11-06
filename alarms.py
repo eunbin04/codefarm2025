@@ -80,9 +80,14 @@ def show_alarms():
             <b>시간:</b> {selected_row['시간']}<br>
             <b>상태:</b> {selected_row['상태']}<br>
             <b>설명:</b> {selected_row['설명']}<br>
-            <ul>
-                {"<li>센서 점검 필요</li><li>시스템 로그 확인</li>" if selected_row["상태"] == "미해결" else "<li>이미 해결된 알림입니다.</li>"}
-            </ul>
+        <ul>
+            {
+                "<li>센서 점검 필요</li><li>시스템 로그 확인</li>" 
+                if selected_row["상태"] == "미해결" 
+                else ("<li>센서 오류입니다.</li>" if selected_row["상태"] == "센서 오류" 
+                    else "<li>이미 해결된 알림입니다.</li>")
+            }
+        </ul>
         </div>
         """, unsafe_allow_html=True)
 
