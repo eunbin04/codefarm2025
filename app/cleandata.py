@@ -6,13 +6,13 @@ from outlier_fix.train_models import train_model
 def show_cleandata():
     st.title("📈 대시보드")
 
-    st.markdown("### 모델 학습 이력 보기")
+    st.markdown("### 모델 학습 시키기")
 
     # 실행 버튼 만들기
-    if st.button("모델 학습 실행"):
+    if st.button("실행"):
         with st.spinner("모델 학습 중... 잠시만 기다려주세요"):
             result = train_model()
-        st.success("모델 학습이 완료되었습니다!")
+        st.success("학습이 완료되었습니다!")
         # 학습 로그 파일 저장
         with open("outlier_fix/train_log.txt", "a") as f:
             f.write(f"{datetime.datetime.now()}\n")
