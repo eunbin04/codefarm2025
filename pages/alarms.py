@@ -107,7 +107,7 @@ def show_alarms():
                     st.session_state.resolved_clicked = False
                     st.session_state.alarm_data.at[selected_index, "상태"] = "센서 오류"
                 if st.session_state.sensor_error_clicked:
-                    st.markdown("✅ 센서 오류")
+                    st.success("상태가 저장되었습니다!")
 
             with col2:
                 if st.button("해결 완료", key="resolved"):
@@ -115,11 +115,7 @@ def show_alarms():
                     st.session_state.sensor_error_clicked = False
                     st.session_state.alarm_data.at[selected_index, "상태"] = "해결됨"
                 if st.session_state.resolved_clicked:
-                    st.markdown("✅ 해결 완료")
-
-            submitted = st.button("저장")
-            if submitted:
-                st.success("상태가 저장되었습니다!")
+                    st.success("상태가 저장되었습니다!")
 
 
 
