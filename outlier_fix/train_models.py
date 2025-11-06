@@ -56,7 +56,7 @@ model_dir = "outlier_fix/trained_models"
 os.makedirs("outlier_fix/trained_models", exist_ok=True)
 
 
-def train_models():
+def train_model():
     for target_col in target_list:
         #print(f"\n===== {target_col} 모델 학습 시작 =====")
 
