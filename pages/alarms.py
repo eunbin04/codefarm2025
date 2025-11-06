@@ -93,17 +93,35 @@ def show_alarms():
         """, unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
+
         if selected_row["상태"] == "미해결":
+            # 초기값을 세션 상태에 저장 (없으면 False)
+            if "sensor_error_clicked" not in st.session_state:
+                st.session_state.sensor_error_clicked = False
+            if "resolved_clicked" not in st.session_state:
+                st.session_state.resolved_clicked = False
+
             with col1:
                 if st.button("센서 오류", key="sensor_error"):
+                    st.session_state.sensor_error_clicked = True
+                    st.session_state.resolved_clicked = False
                     st.session_state.alarm_data.at[selected_index, "상태"] = "센서 오류"
+                if st.session_state.sensor_error_clicked:
+                    st.markdown("✅ 센서 오류")
+
             with col2:
                 if st.button("해결 완료", key="resolved"):
+                    st.session_state.resolved_clicked = True
+                    st.session_state.sensor_error_clicked = False
                     st.session_state.alarm_data.at[selected_index, "상태"] = "해결됨"
-                    if submitted:
-                        st.success("설정이 저장되었습니다!")
+                if st.session_state.resolved_clicked:
+                    st.markdown("✅ 해결 완료")
+
+            submitted = st.button("저장")
+            if submitted:
+                st.success("상태가 저장되었습니다!")
 
 
-        submitted = st.form_submit_button("저장")
+
 
 
