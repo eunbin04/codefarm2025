@@ -30,7 +30,16 @@ def show_dashboard():
     클론, 뿌리 형성 단계: 0.8 kPa<br>
     영양 생장: VPD 1.0 kPa<br>
     생식생장: VPD 1.2~1.5 kPa
+    </details>
+    """, unsafe_allow_html=True)
 
+    st.markdown("""
+    <details>
+    <summary><b>몰리에 선도 설명</b></summary>
+    포화수증기압<br>
+    SVP(포화수증기압) = 0.6108 × exp((17.27 × T) / (T + 237.3))<br>
+    VPD(증기압차) = SVP × (1 - RH / 100)<br>
+    T: 온도(°C), RH: 상대습도(%)
     </details>
     """, unsafe_allow_html=True)
 
