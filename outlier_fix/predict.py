@@ -1,11 +1,11 @@
 import pandas as pd
 import lightgbm as lgb  # lgb.LGBMRegressor를 로드하기 위해 필요
 import joblib
-import openpyxl
+# import openpyxl
 import shutil
 
-file_name = 'data.xlsx'###############
-original_file = 'original.xlsx'
+file_name = 'data/mc.csv'###############
+original_file = 'data/mc_copy.csv'
 
 #file_name 파일을 original_file로 복사
 shutil.copy(file_name, original_file)

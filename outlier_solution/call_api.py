@@ -8,7 +8,7 @@ START_DATE = "2025-10-03"                    # 테스트용 시작일
 END_DATE = "2025-11-02"                      # 테스트용 종료일
 
 # 생육데이터 파일 & 컬럼명은 네 실제 CSV에 맞게 바꿔줘
-GROWTH_CSV_PATH = "data/solution_dt.csv"          # 생육데이터 CSV 경로
+GROWTH_CSV_PATH = "solutiondata/solution_dt.csv"          # 생육데이터 CSV 경로
 DATETIME_COL = "date_time"                   # 생육데이터에서 시간 컬럼명
 TEMP_COL = "temperature"                            # 생육데이터에서 기온 컬럼명
 TEMP_DIFF_THRESHOLD = 10.0                    # 10도 이상 차이 나면 이상치로 보기
