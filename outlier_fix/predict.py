@@ -5,8 +5,8 @@ import joblib
 import openpyxl
 import shutil
 
-file_name = 'outlier_find/outliers/mc_outlier_nan_added.csv'
-fixed_file = 'outlier_fix/fixed_datas/mc_outlier_fixed.xlsx'
+file_name = 'data/mc.csv'
+fixed_file = 'outlier_fix/fixed_datas/mc_fixed.xlsx'
 
 df = pd.read_csv(file_name)
 df.to_excel(fixed_file, index=False)
@@ -27,7 +27,6 @@ except FileNotFoundError:
 except Exception as e:
     print(f"엑셀 파일 로드 중 오류 발생: {e}")
     exit()
-
 
 # --- 1. 특징 공학 (Feature Engineering) ---
 # (중요) 예측 시에도 '학습 때와 똑같은' 특징을 만들어야 함

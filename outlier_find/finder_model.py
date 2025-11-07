@@ -6,14 +6,13 @@ import tensorflow as tensorflow
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, RepeatVector, TimeDistributed
 from tensorflow.keras.callbacks import EarlyStopping
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import os
 
+
 # --- 1. 환경 설정 및 파일 경로 ---
-file_path = r"data/mc.csv"
+file_path = r"data/exdata.csv"
 output_directory = r"outlier_find/outliers"  
-output_file_name = 'mc_outlier_nan_added.csv'
+output_file_name = 'exdata_outlier_nan_added.csv'
 output_path = os.path.join(output_directory, output_file_name)
 
 SEQUENCE_LENGTH = 30

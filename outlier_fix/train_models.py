@@ -5,7 +5,6 @@ from sklearn.model_selection import train_test_split
 import joblib
 import os
 
-
 file_name = 'data/mc.csv' ########################
 
 # --- 0. 엑셀 파일 불러오기 및 전처리 ---
