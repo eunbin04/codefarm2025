@@ -1,26 +1,28 @@
+# predict.py
 import pandas as pd
 import lightgbm as lgb  # lgb.LGBMRegressor를 로드하기 위해 필요
 import joblib
-# import openpyxl
+import openpyxl
 import shutil
 
-file_name = 'data/mc.csv'###############
-original_file = 'data/mc_copy.csv'
+file_name = 'outlier_find/outliers/mc_outlier_nan_added.csv'
+fixed_file = 'outlier_fix/fixed_datas/mc_outlier_fixed.xlsx'
 
-#file_name 파일을 original_file로 복사
-shutil.copy(file_name, original_file)
+df = pd.read_csv(file_name)
+df.to_excel(fixed_file, index=False)
+
 
 # --- 0. 엑셀 파일 불러오기 및 전처리 ---
-use_cols = [0, 1, 3, 4] ############사용자에게 위치값 받아와야 함
+use_cols = [0, 1, 2, 3] ############사용자에게 위치값 받아와야 함
 try:
-    df = pd.read_excel(file_name, header=0, usecols=use_cols)
+    df = pd.read_excel(fixed_file, header=0, usecols=use_cols)
     df.columns = ['Timestamp', 'Temperature', 'Humidity', 'Solar_Radiation']
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
     df['Temperature'] = pd.to_numeric(df['Temperature'], errors='coerce')
     df['Humidity'] = pd.to_numeric(df['Humidity'], errors='coerce')
     df['Solar_Radiation'] = pd.to_numeric(df['Solar_Radiation'], errors='coerce')
 except FileNotFoundError:
-    print(f"오류: {file_name} 파일을 찾을 수 없습니다.")
+    print(f"오류: {fixed_file} 파일을 찾을 수 없습니다.")
     exit()
 except Exception as e:
     print(f"엑셀 파일 로드 중 오류 발생: {e}")
@@ -64,7 +66,7 @@ if target_to_predict:
 if target_to_predict and predict_df is not None:
     try:
         # --- 3. X (특징) / y (타겟) 정의 ---
-        model_filename = f'model_{target_to_predict}.pkl'
+        model_filename = f'outlier_fix/trained_models/model_{target_to_predict}.pkl'
 
         # (수정) 훈련된 모델 로드
         model = joblib.load(model_filename)
@@ -104,15 +106,15 @@ if target_to_predict and predict_df is not None:
             raise Exception(f"타겟 '{target_to_predict}'의 엑셀 열을 찾을 수 없습니다.")
 
         # (3) 엑셀 파일 열기, 수정, 저장
-        wb = openpyxl.load_workbook(file_name)
+        wb = openpyxl.load_workbook(fixed_file)
         ws = wb.active  # (또는 wb['시트이름'])
 
         # (4) '쏙' 하고 값 집어넣기
         ws.cell(row=excel_row, column=excel_col).value = predicted_value[0]
 
         # (5) 파일 저장
-        wb.save(file_name)
-        # (print(f"보정 완료: {excel_row}행, {excel_col}열에 {predicted_value[0]:.2f} 저장"))
+        wb.save(fixed_file)
+        print(f"보정 완료: {excel_row}행, {excel_col}열에 {predicted_value[0]:.2f} 저장")
 
     except FileNotFoundError:
         print(f"오류: '{model_filename}' 모델 파일이 없습니다. (학습 먼저 실행 필요)")
