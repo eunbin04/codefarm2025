@@ -1,5 +1,6 @@
 # streamlit_app.py
 import streamlit as st
+from utils import get_korea_time
 from app.home import show_home
 from app.cleandata import show_cleandata
 from app.vpd import show_vpd
@@ -9,7 +10,7 @@ from app.mediadata import show_mediadata
 from app.alarms import show_alarms
 from app.settings import show_settings
 
-
+korea_now = get_korea_time()
 st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
 st.sidebar.title('메뉴')
