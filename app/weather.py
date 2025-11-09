@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 
-# ===================== 1. 위경도 → 격자 =====================
+
 def latlon_to_xy(lat, lon):
     RE = 6371.00877
     GRID = 5.0
@@ -55,20 +55,19 @@ def deg_to_dir(deg):
     idx = int((deg + 11.25) // 22.5) % 16
     return dirs[idx]
 
-# ===================== 2. Streamlit 앱 =====================
+
 def show_weather():
-    st.title("⛅ 실시간 기상 정보")
+    st.title("⛅ 기상 정보")
     st.markdown("---")
 
     # 입력값: 위경도
     LAT = st.number_input('위도 (LAT)', value=36.1234, format="%.4f")
     LON = st.number_input('경도 (LON)', value=127.5678, format="%.4f")
-    SERVICE_KEY = st.text_input('기상청 API KEY', 
-                                "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9")
+    SERVICE_KEY = "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9"
 
-    # 격자 변환
+
     nx, ny = latlon_to_xy(LAT, LON)
-    st.write(f"격자 좌표: ({nx}, {ny})")
+    st.write(f"좌표: ({nx}, {ny})")
 
     # 발표 기준시각 (오늘, 40분 전 정시 기준)
     now = datetime.now()
@@ -159,8 +158,7 @@ def show_weather():
     )
 
     st.markdown("---")
-    st.markdown("데이터 출처" \
-    "기상청 초단기실황 API")
+    st.markdown("데이터 출처: 기상청 초단기실황 API")
 
 
 if __name__ == "__main__":
