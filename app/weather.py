@@ -1,8 +1,10 @@
+# weather.py
 import streamlit as st
 import math
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
+from utils import get_korea_time
 
 
 def latlon_to_xy(lat, lon):
@@ -70,9 +72,9 @@ def show_weather():
     st.write(f"좌표: ({nx}, {ny})")
 
     # 발표 기준시각 (오늘, 40분 전 정시 기준)
-    now = datetime.now()
-    base_time = (now - timedelta(minutes=40)).strftime("%H00")
-    base_date = now.strftime("%Y%m%d")
+    korea_now = get_korea_time()
+    base_time = (korea_now - timedelta(minutes=40)).strftime("%H00")
+    base_date = korea_now.strftime("%Y%m%d")
 
     # API 파라미터
     BASE_URL = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst"
