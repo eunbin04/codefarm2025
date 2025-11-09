@@ -1,50 +1,166 @@
-# weather.py
 import streamlit as st
-import datetime
-from outlier_solution.call_api import fetch_asos_daily, STN_ID, SERVICE_KEY
+import math
+import requests
+import pandas as pd
+from datetime import datetime, timedelta
 
+# ===================== 1. 위경도 → 격자 =====================
+def latlon_to_xy(lat, lon):
+    RE = 6371.00877
+    GRID = 5.0
+    SLAT1 = 30.0
+    SLAT2 = 60.0
+    OLON = 126.0
+    OLAT = 38.0
+    XO = 43
+    YO = 136
+    DEGRAD = math.pi / 180.0
+    re = RE / GRID
+    slat1 = SLAT1 * DEGRAD
+    slat2 = SLAT2 * DEGRAD
+    olon = OLON * DEGRAD
+    olat = OLAT * DEGRAD
+    sn = math.tan(math.pi * 0.25 + slat2 * 0.5) / math.tan(math.pi * 0.25 + slat1 * 0.5)
+    sn = math.log(math.cos(slat1) / math.cos(slat2)) / math.log(sn)
+    sf = math.tan(math.pi * 0.25 + slat1 * 0.5)
+    sf = (sf ** sn) * math.cos(slat1) / sn
+    ro = math.tan(math.pi * 0.25 + olat * 0.5)
+    ro = re * sf / (ro ** sn)
+    ra = math.tan(math.pi * 0.25 + lat * DEGRAD * 0.5)
+    ra = re * sf / (ra ** sn)
+    theta = lon * DEGRAD - olon
+    if theta > math.pi:
+        theta -= 2.0 * math.pi
+    if theta < -math.pi:
+        theta += 2.0 * math.pi
+    theta *= sn
+    nx = int(ra * math.sin(theta) + XO + 0.5)
+    ny = int(ro - ra * math.cos(theta) + YO + 0.5)
+    return nx, ny
+
+def pty_to_desc(pty):
+    mapping = {0: "강수 없음", 1: "비", 2: "비/눈", 3: "눈", 5: "빗방울", 6: "빗방울/눈날림", 7: "눈날림"}
+    return mapping.get(pty, f"코드 {pty}")
+
+def deg_to_dir(deg):
+    if pd.isna(deg):
+        return "정보 없음"
+    deg = float(deg) % 360
+    dirs = [
+        "북", "북북동", "북동", "동북동", "동",
+        "동남동", "남동", "남남동", "남",
+        "남남서", "남서", "서남서", "서",
+        "서북서", "북서", "북북서"
+    ]
+    idx = int((deg + 11.25) // 22.5) % 16
+    return dirs[idx]
+
+# ===================== 2. Streamlit 앱 =====================
 def show_weather():
-    st.title('⛅ 기상 정보')
+    st.title("⛅ 실시간 기상 정보")
     st.markdown("---")
 
-    today = datetime.date.today()
-    one_month_ago = today - datetime.timedelta(days=30)
-    selected_dates = st.date_input(
-        "기간 선택",
-        value=(one_month_ago, today)
-    )
-    if isinstance(selected_dates, tuple):
-        start_date, end_date = selected_dates
-    else:
-        start_date = end_date = selected_dates
+    # 입력값: 위경도
+    LAT = st.number_input('위도 (LAT)', value=36.1234, format="%.4f")
+    LON = st.number_input('경도 (LON)', value=127.5678, format="%.4f")
+    SERVICE_KEY = st.text_input('기상청 API KEY', 
+                                "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9")
 
-    if start_date > end_date:
-        st.error('시작일이 종료일보다 이후일 수 없습니다.')
-        return
+    # 격자 변환
+    nx, ny = latlon_to_xy(LAT, LON)
+    st.write(f"격자 좌표: ({nx}, {ny})")
 
+    # 발표 기준시각 (오늘, 40분 전 정시 기준)
+    now = datetime.now()
+    base_time = (now - timedelta(minutes=40)).strftime("%H00")
+    base_date = now.strftime("%Y%m%d")
+
+    # API 파라미터
+    BASE_URL = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst"
+    params = {
+        "serviceKey": SERVICE_KEY,
+        "pageNo": 1,
+        "numOfRows": 100,
+        "dataType": "JSON",
+        "base_date": base_date,
+        "base_time": base_time,
+        "nx": nx,
+        "ny": ny,
+    }
+
+    # API 호출 및 에러 처리
     try:
-        weather_data = fetch_asos_daily(
-            stn_id=STN_ID,
-            start_date=start_date.strftime('%Y%m%d'),
-            end_date=end_date.strftime('%Y%m%d'),
-            service_key=SERVICE_KEY
-        )
+        response = requests.get(BASE_URL, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        items = data["response"]["body"]["items"]["item"]
+        df = pd.DataFrame(items)
+        if df.empty:
+            st.info('기상청에서 응답은 있지만, 데이터가 없습니다.')
+            return
     except Exception as e:
-        st.error(f'기상청 데이터 조회 중 오류가 발생했습니다: {e}')
+        st.error(f"기상청 API 데이터 조회 실패: {e}")
         return
 
-    if weather_data is not None and not weather_data.empty:
-        st.subheader("일자료 데이터")
-        st.dataframe(weather_data)
-        csv = weather_data.to_csv(index=False).encode('utf-8-sig')
-        st.download_button(
-            label=":material/download: CSV 파일",
-            data=csv,
-            file_name='asos_daily_data.csv',
-            mime='text/csv'
-        )
-    else:
-        st.info('해당 기간에 데이터가 없습니다.')
+    # 데이터 가공
+    df_pivot = df.pivot(
+        index=["baseDate", "baseTime", "nx", "ny"],
+        columns="category",
+        values="obsrValue"
+    ).reset_index()
+    df_pivot["datetime"] = pd.to_datetime(
+        df_pivot["baseDate"] + df_pivot["baseTime"], format="%Y%m%d%H%M"
+    )
+    latest = df_pivot.sort_values("datetime").iloc[-1]
+
+    def to_float(val):
+        try:
+            return float(val)
+        except:
+            return None
+
+    t1h = to_float(latest.get("T1H"))
+    reh = to_float(latest.get("REH"))
+    rn1 = to_float(latest.get("RN1"))
+    wsd = to_float(latest.get("WSD"))
+    vec = to_float(latest.get("VEC"))
+    pty = latest.get("PTY")
+    pty = int(pty) if pty is not None and str(pty).isdigit() else 0
+
+    pty_desc = pty_to_desc(pty)
+    wind_dir = deg_to_dir(vec)
+    dt_str = latest["datetime"].strftime("%Y-%m-%d %H:%M")
+
+    # 요약 출력
+    summary = (
+        f"[{dt_str}] 현재 기준\n"
+        f"- 기온: {t1h}℃\n"
+        f"- 습도: {reh}%\n"
+        f"- 강수: {pty_desc}"
+    )
+    if rn1 is not None:
+        summary += f" (최근 1시간 강수량 {rn1}mm)"
+    summary += f"\n- 풍속: {wsd} m/s, 풍향: {wind_dir}"
+    if vec is not None:
+        summary += f" ({vec}°)"
+
+    st.subheader("실시간 요약")
+    st.markdown(summary)
+    st.subheader("원본 데이터 미리보기")
+    st.dataframe(df_pivot)
+
+    # CSV 다운로드 버튼
+    csv = df_pivot.to_csv(index=False).encode('utf-8-sig')
+    st.download_button(
+        label=":material/download: CSV 파일",
+        data=csv,
+        file_name="ultra_short_weather.csv",
+        mime="text/csv"
+    )
 
     st.markdown("---")
-    st.markdown("데이터 출처: 기상청 ASOS 일자료 API")
+    st.markdown("데이터 출처: 기상청 초단기실황 API")
+
+
+if __name__ == "__main__":
+    show_weather()
