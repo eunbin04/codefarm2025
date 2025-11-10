@@ -5,3 +5,4 @@ scikit-learn
 joblib
 schedule
 streamlit-leaflet
+openpyxl
