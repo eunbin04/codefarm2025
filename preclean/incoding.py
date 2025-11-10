@@ -132,11 +132,14 @@ def make_clean_csvs(base_path: str = BASE_PATH,
         return
 
     for path in csv_files:
-        try:
+        if isinstance(path, str):
             filename = os.path.basename(path)
-        except Exception:
-            filename = 'uploaded_file'
-        print(f"[경고] {filename}: 인코딩이 완벽하진 않을 수 있음 (깨짐 비율 {best_bad:.2f}), 사용 enc={best_enc}")
+        else:
+            # Streamlit 업로드 파일 객체는 .name 속성에 원본 파일명 있음
+            filename = getattr(path, 'name', 'uploaded_file')
+
+        print(f"[경고] {filename}: 인코딩이 완벽하진 않을 수 있음")
+
 
         name, ext = os.path.splitext(filename)
 
