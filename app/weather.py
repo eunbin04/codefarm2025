@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 from utils import get_korea_time
-from streamlit_leaflet import st_leaflet  # 추가
+from streamlit_leaflet import st_leaflet
 
 def latlon_to_xy(lat, lon):
     RE = 6371.00877
