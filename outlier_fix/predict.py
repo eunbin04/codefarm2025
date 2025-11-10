@@ -115,7 +115,9 @@ def correct_outlier():
 
             # (5) 파일 저장
             wb.save(fixed_file)
-            print(f"보정 완료: {excel_row}행, {excel_col}열에 {predicted_value[0]:.2f} 저장")
+            msg = f"{excel_row}행, {excel_col}열에 {predicted_value[0]:.2f} 저장"
+            print(msg)  # 터미널 출력용
+            return msg
 
         except FileNotFoundError:
             print(f"오류: '{model_filename}' 모델 파일이 없습니다. (학습 먼저 실행 필요)")

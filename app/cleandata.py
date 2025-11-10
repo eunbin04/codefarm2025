@@ -71,7 +71,7 @@ def download():
         data = f.read()
 
     st.download_button(
-        label="클린 데이터 다운로드",
+        label=":material/download: 클린 데이터 다운로드",
         data=data,
         file_name="clean_data.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -118,7 +118,7 @@ def show_cleandata():
     upload()
 
     if st.button("보정하기"):
-        correct_outlier()
+        msg = correct_outlier()
         st.success("보정 작업이 완료되었습니다!")
-
+        st.text(msg)  # 추가로 보정 위치 메시지 표시
     download()
