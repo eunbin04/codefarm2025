@@ -1,12 +1,12 @@
 # predict.py
 
+import pandas as pd
+import lightgbm as lgb  # lgb.LGBMRegressor를 로드하기 위해 필요
+import joblib
+import openpyxl
+
+
 def correct_outlier():
-
-    import pandas as pd
-    import lightgbm as lgb  # lgb.LGBMRegressor를 로드하기 위해 필요
-    import joblib
-    import openpyxl
-
     file_name = 'data/mc.csv'
     fixed_file = 'outlier_fix/fixed_datas/mc_fixed.xlsx'
 
