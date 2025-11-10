@@ -37,7 +37,7 @@ def show_mcdata():
 
     # 사용자가 선택할 기본값: 전체 범위
     default_start = min_date
-    default_end = max_date
+    default_end = min_date
 
     # 날짜 입력 받기 (달력 형태)
     date_range = st.date_input(
