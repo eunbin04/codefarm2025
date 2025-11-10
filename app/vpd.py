@@ -9,11 +9,9 @@ def calc_vpd(temp_c, rh):
     return round(vpd, 3)
 
 def show_vpd():
-    st.title("📈 대시보드")
+    st.title("🧮 VPD 계산기")
 
     st.markdown("---")
-
-    st.subheader("VPD 계산기")
 
     temp = st.number_input("🌡️ 온도 (°C)", min_value=-10.0, max_value=40.0, value=25.0, step=1.0)
     rh = st.number_input("💧 상대습도 (%)", min_value=0.0, max_value=100.0, value=70.0, step=1.0)

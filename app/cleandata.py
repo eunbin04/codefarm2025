@@ -87,11 +87,11 @@ def download():
 
 
 def show_cleandata():
-    st.title("📈 대시보드")
+    st.title("✨ 클린 데이터")
 
     st.markdown("---")
     
-    st.subheader("모델 학습 시키기")
+    st.subheader("🎓 모델 학습")
 
     # 수동 실행 버튼
     if st.button("▶️ 수동 학습 실행"):
@@ -102,7 +102,7 @@ def show_cleandata():
             f.write(f"{datetime.datetime.now()}\n")
 
     # 자동 실행 시작 버튼
-    if st.button("🔁 자동 학습 시작"):
+    if st.button("🔄 자동 학습 시작"):
         start_scheduler()
 
     # 자동 실행 중지 버튼
@@ -113,7 +113,7 @@ def show_cleandata():
     try:
         with open("outlier_fix/train_log.txt", "r") as f:
             log_content = f.read()
-        st.subheader("이전 학습 실행 로그")
+        st.markdown("#### 이전 학습 실행 로그")
         st.text(log_content)
     except FileNotFoundError:
         st.info("아직 실행 로그가 없습니다.")
@@ -121,13 +121,13 @@ def show_cleandata():
 
     st.markdown("---")
 
-    st.subheader("클린 데이터 다운로드")
+    st.subheader("🛠️ 클린 데이터 다운로드")
     upload_preclean()
 
     if st.button("보정하기"):
         with st.spinner("보정 중... 잠시만 기다려주세요"):
             msg = correct_outlier()
         st.success("보정 작업이 완료되었습니다!")
-        st.text(msg)  # 추가로 보정 위치 메시지 표시
+        st.info(msg)  # 추가로 보정 위치 메시지 표시
         
     download()
