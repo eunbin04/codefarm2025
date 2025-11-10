@@ -2,12 +2,9 @@
 import pandas as pd
 import joblib
 import openpyxl
-import shutil
 
 def correct_outlier():
-    file_name = 'data/mc_copy.xlsx'  
     fixed_file = 'outlier_fix/fixed_datas/mc_fixed.xlsx'  
-    model_dir = 'outlier_fix/trained_models'  
 
     # --- 내부 변수: 유동적 컬럼 위치 지정
     h_location = 3
@@ -20,10 +17,6 @@ def correct_outlier():
         (t_location, 'Temperature'),
         (r_location, 'Solar_Radiation')
     ])]
-
-    # 원본 엑셀 파일을 복사해서 fixed_file 경로에 저장
-    shutil.copyfile(file_name, fixed_file)
-    df = pd.read_excel(fixed_file)
 
     # use_cols 로 컬럼 인덱스를 유동 할당, 고정된 컬럼명 배열 적용
     use_cols = [0, h_location, r_location, t_location]
@@ -68,7 +61,7 @@ def correct_outlier():
 
     if target_to_predict and predict_df is not None:
         try:
-            model_filename = f'{model_dir}/model_{target_to_predict}.pkl'
+            model_filename = f'outlier_fix/trained_models/model_{target_to_predict}.pkl'
             model = joblib.load(model_filename)
 
             all_analysis_cols = ['Temperature', 'Humidity', 'Solar_Radiation',
@@ -94,16 +87,17 @@ def correct_outlier():
             ws = wb.active
 
             ws.cell(row=excel_row, column=excel_col).value = predicted_value[0]
+
             wb.save(fixed_file)
+            msg = f"{df.at[original_nan_index, 'Timestamp']} 행, '{target_to_predict}' 열에 {predicted_value[0]:.2f} 저장"
+            print(msg)
+            return msg
 
         except FileNotFoundError:
             print(f"오류: '{model_filename}' 모델 파일이 없습니다. (학습 먼저 실행 필요)")
         except Exception as e:
             print(f"예측 중 오류 발생: {e}")
 
-        msg = f"{df.at[original_nan_index, 'Timestamp']} 행, '{target_to_predict}' 열에 {predicted_value[0]:.2f} 저장"
-        print(msg)
-        return msg
 
 if __name__ == "__main__":
     correct_outlier()

@@ -61,8 +61,8 @@ def upload_preclean():
             df_clean = clean_for_analysis(df_clean)
 
         # 2) 전처 데이터 미리보기
-        st.write("전처리된 데이터 미리보기")
-        st.dataframe(df_clean.head())
+        st.write("전처리된 데이터 미리보기(끝에서 5행)")
+        st.dataframe(df_clean.tail())
 
         # 3) 클린 데이터를 DB에 저장
         conn = sqlite3.connect('codefarmdb.sqlite')
