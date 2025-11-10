@@ -89,7 +89,7 @@ def correct_outlier():
             ws.cell(row=excel_row, column=excel_col).value = predicted_value[0]
 
             wb.save(fixed_file)
-            msg = f"{df.at[original_nan_index, 'Timestamp']} 행, '{target_to_predict}' 열에 {predicted_value[0]:.2f} 저장"
+            msg = f"{df.at[original_nan_index, 'Timestamp']} 행, {target_to_predict} 열에 {predicted_value[0]:.2f} 저장"
             print(msg)
             return msg
 
