@@ -5,8 +5,20 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 from utils import get_korea_time
-from streamlit_leaflet import st_leaflet
 
+# 지역별 좌표 정의
+region_coords = {
+    "서울특별시": (37.5665, 126.9780),
+    "경기도 수원시": (37.2636, 127.0286),
+    "대구광역시": (35.8714, 128.6014),
+    "부산광역시": (35.1796, 129.0756),
+    "인천광역시": (37.4563, 126.7052),
+    "광주광역시": (35.1595, 126.8526),
+    "대전광역시": (36.3504, 127.3845),
+    "울산광역시": (35.5397, 129.3114),
+    "세종특별자치시": (36.4803, 127.2891),
+    "제주특별자치도": (33.4996, 126.5312),
+}
 
 def latlon_to_xy(lat, lon):
     RE = 6371.00877
@@ -62,26 +74,10 @@ def show_weather():
     st.title("⛅ 기상 정보")
     st.markdown("---")
 
-    # 지도 표시
-    map_data = st_leaflet(
-        location=[37.5665, 126.9780],  # 초기 위치 (서울)
-        zoom=10,
-        height=400,
-        width="100%",
-        draw=True,
-        click=True,
-        double_click=True,
-        key="map"
-    )
-
-    # 지도 클릭 좌표 처리
-    if map_data and "last_clicked" in map_data:
-        LAT = map_data["last_clicked"]["lat"]
-        LON = map_data["last_clicked"]["lng"]
-        st.write(f"선택한 좌표: 위도 {LAT}, 경도 {LON}")
-    else:
-        st.write("지도에서 위치를 클릭해 주세요.")
-        return
+    # 지역 선택 드롭다운
+    region = st.selectbox("지역 선택", list(region_coords.keys()))
+    LAT, LON = region_coords[region]
+    st.write(f"선택한 지역: {region} (위도: {LAT}, 경도: {LON})")
 
     SERVICE_KEY = "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9"
 
