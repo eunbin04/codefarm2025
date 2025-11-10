@@ -1,6 +1,6 @@
 # predict.py
 
-def correct_outlier(file_path, model_dir):
+def correct_outlier():
 
     import pandas as pd
     import lightgbm as lgb  # lgb.LGBMRegressor를 로드하기 위해 필요
