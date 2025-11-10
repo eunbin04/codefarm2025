@@ -73,7 +73,7 @@ def show_weather():
 
     # 발표 기준시각 (오늘, 40분 전 정시 기준)
     korea_now = get_korea_time()
-    base_time = korea_now.strftime("%H00")
+    base_time = (korea_now - timedelta(minutes=30)).strftime("%H00")
     base_date = korea_now.strftime("%Y%m%d")
 
     # API 파라미터
