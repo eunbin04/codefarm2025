@@ -2,24 +2,42 @@
 import pandas as pd
 import joblib
 import openpyxl
+import json
+import os
+
+SETTINGS_FILE = "config/settings.json"
+fixed_file = 'outlier_fix/fixed_datas/mc_fixed.xlsx'
+
+
+def load_settings():
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+        return settings
+    else:
+        # 기본값
+        return {
+            "h_location": 3,
+            "r_location": 4,
+            "t_location": 1,
+        }
+
 
 def correct_outlier():
-    fixed_file = 'outlier_fix/fixed_datas/mc_fixed.xlsx'  
-
-    # --- 내부 변수: 유동적 컬럼 위치 지정
-    h_location = 3
-    r_location = 4
-    t_location = 1
-
-    # 위치 변수 기준 컬럼명 정렬
+    settings = load_settings()
+    h_location = settings.get('h_location', 3)
+    r_location = settings.get('r_location', 4)
+    t_location = settings.get('t_location', 1)
+    
+    # 컬럼 위치 기준 이름 정렬
     array = [name for _, name in sorted([
         (h_location, 'Humidity'),
         (t_location, 'Temperature'),
         (r_location, 'Solar_Radiation')
     ])]
 
-    # use_cols 로 컬럼 인덱스를 유동 할당, 고정된 컬럼명 배열 적용
     use_cols = [0, h_location, r_location, t_location]
+
     try:
         df = pd.read_excel(fixed_file, header=0, usecols=use_cols)
         df.columns = ['Timestamp'] + array
@@ -34,7 +52,6 @@ def correct_outlier():
         print(f"엑셀 파일 로드 중 오류 발생: {e}")
         exit()
 
-    # --- 특징 공학 및 결측치 판별 (기존 고정 리스트 유지) ---
     df['hour'] = df['Timestamp'].dt.hour
     df['minute'] = df['Timestamp'].dt.minute
     df['temp_lag_1'] = df['Temperature'].shift(1)
@@ -54,7 +71,7 @@ def correct_outlier():
         target_to_predict = 'Humidity'
     elif last_row['Solar_Radiation'].isnull().any():
         target_to_predict = 'Solar_Radiation'
-    
+
     if target_to_predict:
         predict_df = last_row
         original_nan_index = last_row_index
@@ -71,23 +88,21 @@ def correct_outlier():
             X_predict = predict_df[features]
             predicted_value = model.predict(X_predict)
 
-            # 유동적 col_map 생성, 기존 고정값 대신 위치 변수 +1 보정
+            # 열 위치는 엑셀 기준 (헤더 포함해서 +1, 엑셀 행 기준 +2 보정)
             col_map = {
                 'Humidity': h_location + 1,
                 'Solar_Radiation': r_location + 1,
                 'Temperature': t_location + 1,
             }
             excel_col = col_map.get(target_to_predict)
-            excel_row = original_nan_index + 2  # 엑셀 행 위치 산출
+            excel_row = original_nan_index + 2
 
             if excel_col is None:
                 raise Exception(f"타겟 '{target_to_predict}'의 엑셀 열을 찾을 수 없습니다.")
 
             wb = openpyxl.load_workbook(fixed_file)
             ws = wb.active
-
             ws.cell(row=excel_row, column=excel_col).value = predicted_value[0]
-
             wb.save(fixed_file)
             msg = f"{df.at[original_nan_index, 'Timestamp']} 행, {target_to_predict} 열에 {predicted_value[0]:.2f} 저장"
             print(msg)

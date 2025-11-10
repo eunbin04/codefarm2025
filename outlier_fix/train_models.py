@@ -4,22 +4,39 @@ import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 import joblib
 import os
+import json
 
-file_name = 'data/mc.csv'  
-copy_file = 'data/mc_copy.xlsx' 
+SETTINGS_FILE = "config/settings.json"
+file_name = 'data/mc.csv'
+copy_file = 'data/mc_copy.xlsx'
 
-# CSV → 엑셀 변환
-try:
-    df = pd.read_csv(file_name)
-    df.to_excel(copy_file, index=False)
-except Exception as e:
-    print(f"파일 변환 실패: {e}")
+
+def load_settings():
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+        return settings
+    else:
+        # 설정 파일 없으면 기본값 반환
+        return {
+            "h_location": 3,
+            "r_location": 4,
+            "t_location": 1,
+        }
 
 def train_model():
-    # 내부 변수로 컬럼 위치 지정 (사용자 입력 또는 환경에 맞게 설정)
-    h_location = 3
-    r_location = 4
-    t_location = 1
+    settings = load_settings()
+    h_location = settings.get('h_location', 3)
+    r_location = settings.get('r_location', 4)
+    t_location = settings.get('t_location', 1)
+
+    # CSV → 엑셀 변환
+    try:
+        df = pd.read_csv(file_name)
+        df.to_excel(copy_file, index=False)
+    except Exception as e:
+        print(f"파일 변환 실패: {e}")
+
 
     array = [name for _, name in sorted([
         (h_location, 'Humidity'),
