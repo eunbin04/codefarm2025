@@ -132,7 +132,12 @@ def make_clean_csvs(base_path: str = BASE_PATH,
         return
 
     for path in csv_files:
-        filename = os.path.basename(path)
+        try:
+            filename = os.path.basename(path)
+        except Exception:
+            filename = 'uploaded_file'
+        print(f"[경고] {filename}: 인코딩이 완벽하진 않을 수 있음 (깨짐 비율 {best_bad:.2f}), 사용 enc={best_enc}")
+
         name, ext = os.path.splitext(filename)
 
         # 이미 _clean 으로 끝나는 파일은 스킵
