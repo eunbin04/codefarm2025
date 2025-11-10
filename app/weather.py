@@ -189,10 +189,9 @@ def show_weather():
             """, unsafe_allow_html=True)
 
         st.markdown(f"<div style='text-align:right; font-size:12px; color:#666;'>{dt_str} 기준</div>", unsafe_allow_html=True)
-    
-
-    st.subheader("실시간 요약")
     st.markdown(summary(dt_str, t1h, reh, pty_desc, rn1, wsd, wind_dir, vec))
+
+    
     st.subheader("날씨 데이터 다운로드")
     st.dataframe(df_pivot)
 
