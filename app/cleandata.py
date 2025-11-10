@@ -94,7 +94,7 @@ def show_cleandata():
     st.subheader("모델 학습 시키기")
 
     # 수동 실행 버튼
-    if st.button("수동 학습 실행"):
+    if st.button("▶️ 수동 학습 실행"):
         with st.spinner("모델 학습 중... 잠시만 기다려주세요"):
             train_model()
         st.success("학습이 완료되었습니다!")
@@ -102,11 +102,11 @@ def show_cleandata():
             f.write(f"{datetime.datetime.now()}\n")
 
     # 자동 실행 시작 버튼
-    if st.button("자동 학습 시작"):
+    if st.button("🔁 자동 학습 시작"):
         start_scheduler()
 
     # 자동 실행 중지 버튼
-    if st.button("자동 학습 중지"):
+    if st.button("⏹️ 자동 학습 중지"):
         stop_scheduler()
 
     # 로그 파일 표시
