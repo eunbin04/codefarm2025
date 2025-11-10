@@ -68,16 +68,6 @@ def show_weather():
     SERVICE_KEY = "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9"
 
 
-    # 날짜 선택
-    selected_date = st.date_input('날짜 선택', value=datetime.now().date())
-
-    # 시간 선택 (정시 기준: 00시 ~ 23시)
-    selected_hour = st.selectbox('시간 선택 (정시 기준)', [f"{h:02d}00" for h in range(24)], index=(datetime.now().hour - 1) % 24)
-
-    base_date = selected_date.strftime("%Y%m%d")
-    base_time = selected_hour
-
-
     nx, ny = latlon_to_xy(LAT, LON)
     # st.write(f"좌표: ({nx}, {ny})")
 
