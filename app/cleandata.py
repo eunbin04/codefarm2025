@@ -121,4 +121,5 @@ def show_cleandata():
         msg = correct_outlier()
         st.success("보정 작업이 완료되었습니다!")
         st.text(msg)  # 추가로 보정 위치 메시지 표시
+        
     download()
