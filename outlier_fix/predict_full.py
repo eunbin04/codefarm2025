@@ -3,10 +3,10 @@ import pandas as pd
 import joblib
 import openpyxl
 
-file_name = 'data.xlsx'#################
-h_location = 2
-r_location = 1
-t_location = 3
+file_name = 'data/mc_copy.xlsx'  
+h_location = 3
+r_location = 4
+t_location = 1
 
 array = [name for _, name in sorted([
     (h_location, 'Humidity'),
