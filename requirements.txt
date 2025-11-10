@@ -7,3 +7,4 @@ schedule
 streamlit-leaflet
 openpyxl
 chardet
+seaborn
