@@ -69,7 +69,7 @@ def show_weather():
 
 
     nx, ny = latlon_to_xy(LAT, LON)
-    st.write(f"좌표: ({nx}, {ny})")
+    # st.write(f"좌표: ({nx}, {ny})")
 
     # 발표 기준시각 (오늘, 40분 전 정시 기준)
     korea_now = get_korea_time()
@@ -134,7 +134,7 @@ def show_weather():
 
     # 요약 출력
     summary = (
-        f"[{dt_str}] 현재 기준\n"
+        f"[{dt_str}]\n"
         f"- 기온: {t1h}℃\n"
         f"- 습도: {reh}%\n"
         f"- 강수: {pty_desc}"
