@@ -5,12 +5,12 @@ from outlier_fix.train_models import train_model
 from outlier_fix.predict import correct_outlier
 from outlier_find.find_outlier import find_outlier
 from precleaning.incoding import read_csv_robust, clean_for_analysis
+from outlier_fix.predict import load_settings
 import schedule
 import threading
 import time
 import pandas as pd
 import sqlite3
-from settings import load_settings
 
 scheduler_running = False
 scheduler_thread = None  # 백그라운드 스레드 객체
