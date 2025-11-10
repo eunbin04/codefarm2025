@@ -6,7 +6,8 @@ import json
 import os
 
 SETTINGS_FILE = "config/settings.json"
-fixed_file = 'outlier_fix/fixed_datas/mc_fixed.xlsx'
+file_name = 'data/outliers/priva_delete_error.csv'
+fixed_file = 'outlier_fix/fixed_datas/priva_fixed.xlsx'
 
 
 def load_settings():
@@ -28,7 +29,15 @@ def correct_outlier():
     h_location = settings.get('h_location', 3)
     r_location = settings.get('r_location', 4)
     t_location = settings.get('t_location', 1)
-    
+
+    # CSV → 엑셀 변환
+    try:
+        df = pd.read_csv(file_name)
+        df.to_excel(fixed_file, index=False)
+    except Exception as e:
+        print(f"파일 변환 실패: {e}")
+
+        
     # 컬럼 위치 기준 이름 정렬
     array = [name for _, name in sorted([
         (h_location, 'Humidity'),
