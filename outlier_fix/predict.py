@@ -1,7 +1,5 @@
-# predict.py
-
+# outlier_fix/predict.py
 import pandas as pd
-import lightgbm as lgb  # lgb.LGBMRegressor를 로드하기 위해 필요
 import joblib
 import openpyxl
 
