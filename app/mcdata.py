@@ -1,23 +1,18 @@
 # mcdata.py
 import streamlit as st
 import pandas as pd
-from datetime import timedelta
 
 # 데이터 불러오기(mc.csv)
-def load_mcdata(limit_recent_day=True):
+def load_mcdata():
     df = pd.read_csv('data/mc.csv', encoding='utf-8')
+
     df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
     df.set_index('Timestamp', inplace=True)
+    
     for col in df.columns:
         df[col] = pd.to_numeric(df[col], errors='coerce')
     df.replace(-32767, pd.NA, inplace=True)
-
-    if limit_recent_day:
-        # 최근 하루 데이터만 필터링
-        max_time = df.index.max()
-        min_time = max_time - timedelta(days=1)
-        df = df.loc[min_time:max_time]
 
     df = df.round(3)
 
@@ -31,7 +26,7 @@ def show_mcdata():
 
     st.subheader("📅 기간별 데이터")
 
-    data = load_mcdata(limit_recent_day=False)  # 전체 데이터 불러오기
+    data = load_mcdata()  # 전체 데이터 불러오기
 
     # 데이터가 있는 고유 날짜 리스트 생성
     available_dates = sorted(list(set(data.index.date)))
