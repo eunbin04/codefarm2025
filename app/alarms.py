@@ -16,7 +16,7 @@ def color_status(val):
     return f"background-color: {color}"
 
 def show_alarms():
-    st.title("🚨 알림")
+    st.title("🚨 경고")
 
     st.markdown("---")
 

@@ -52,7 +52,7 @@ with st.sidebar.expander("🌿 모니터링", expanded=True):
     if st.button('배지 정보'):
         set_page('배지 정보')
 
-if st.sidebar.button('🚨 알림'):
+if st.sidebar.button('🚨 경고'):
     set_page('알림')
 
 if st.sidebar.button('⚙️ 설정'):
