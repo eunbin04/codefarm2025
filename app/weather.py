@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 from utils import get_korea_time
-from streamlit_leaflet import st_leaflet  # 추가
+
 
 def latlon_to_xy(lat, lon):
     RE = 6371.00877
@@ -57,35 +57,19 @@ def deg_to_dir(deg):
     idx = int((deg + 11.25) // 22.5) % 16
     return dirs[idx]
 
+
 def show_weather():
     st.title("⛅ 기상 정보")
     st.markdown("---")
 
-    # 지도 표시
-    map_data = st_leaflet(
-        location=[37.5665, 126.9780],  # 초기 위치 (서울)
-        zoom=10,
-        height=400,
-        width="100%",
-        draw=True,
-        click=True,
-        double_click=True,
-        key="map"
-    )
-
-    # 지도 클릭 좌표 처리
-    if map_data and "last_clicked" in map_data:
-        LAT = map_data["last_clicked"]["lat"]
-        LON = map_data["last_clicked"]["lng"]
-        st.write(f"선택한 좌표: 위도 {LAT}, 경도 {LON}")
-    else:
-        st.write("지도에서 위치를 클릭해 주세요.")
-        return
-
+    # 입력값: 위경도
+    LAT = st.number_input('위도 (LAT)', value=36.1234, format="%.4f")
+    LON = st.number_input('경도 (LON)', value=127.5678, format="%.4f")
     SERVICE_KEY = "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9"
 
+
     nx, ny = latlon_to_xy(LAT, LON)
-    st.write(f"격자 좌표: ({nx}, {ny})")
+    st.write(f"좌표: ({nx}, {ny})")
 
     # 발표 기준시각 (오늘, 40분 전 정시 기준)
     korea_now = get_korea_time()
@@ -150,7 +134,7 @@ def show_weather():
 
     # 요약 출력
     summary = (
-        f"[{dt_str}]\n"
+        f"[{dt_str}] 현재 기준\n"
         f"- 기온: {t1h}℃\n"
         f"- 습도: {reh}%\n"
         f"- 강수: {pty_desc}"
@@ -177,6 +161,3 @@ def show_weather():
 
     st.markdown("---")
     st.markdown("데이터 출처: 기상청 초단기실황 API")
-
-if __name__ == "__main__":
-    show_weather()
