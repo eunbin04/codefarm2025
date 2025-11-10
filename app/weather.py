@@ -67,14 +67,17 @@ def show_weather():
     LON = st.number_input('경도 (LON)', value=127.5678, format="%.4f")
     SERVICE_KEY = "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9"
 
+    # 날짜 선택
+    selected_date = st.date_input('날짜 선택', value=datetime.now().date())
+
+    # 시간 선택 (정시 기준: 00시 ~ 23시)
+    selected_hour = st.selectbox('시간 선택 (정시 기준)', [f"{h:02d}00" for h in range(24)], index=(datetime.now().hour - 1) % 24)
+
+    base_date = selected_date.strftime("%Y%m%d")
+    base_time = selected_hour
 
     nx, ny = latlon_to_xy(LAT, LON)
     # st.write(f"좌표: ({nx}, {ny})")
-
-    # 발표 기준시각 (오늘, 40분 전 정시 기준)
-    korea_now = get_korea_time()
-    base_time = (korea_now - timedelta(minutes=40)).strftime("%H00")
-    base_date = korea_now.strftime("%Y%m%d")
 
     # API 파라미터
     BASE_URL = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst"
@@ -147,7 +150,7 @@ def show_weather():
 
     st.subheader("실시간 요약")
     st.markdown(summary)
-    st.subheader("원본 데이터 미리보기")
+    st.subheader("날씨 데이터 다운로드")
     st.dataframe(df_pivot)
 
     # CSV 다운로드 버튼
