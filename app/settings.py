@@ -1,6 +1,5 @@
 # settings.py
 import streamlit as st
-import pandas as pd
 
 def show_settings():
     st.title("⚙️ 설정")
