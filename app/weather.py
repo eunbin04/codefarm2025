@@ -133,17 +133,63 @@ def show_weather():
     dt_str = latest["datetime"].strftime("%Y-%m-%d %H:%M")
 
     # 요약 출력
-    summary = (
-        f"[{dt_str}]\n"
-        f"- 기온: {t1h}℃\n"
-        f"- 습도: {reh}%\n"
-        f"- 강수: {pty_desc}"
-    )
-    if rn1 is not None:
-        summary += f" (최근 1시간 강수량 {rn1}mm)"
-    summary += f"\n- 풍속: {wsd} m/s, 풍향: {wind_dir}"
-    if vec is not None:
-        summary += f" ({vec}°)"
+    def summary(dt_str, t1h, reh, pty_desc, rn1, wsd, wind_dir, vec):
+        st.subheader("실시간 요약")
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.markdown(
+                f"""
+                <div style="border:1px solid #ddd; border-radius:8px; padding:10px; text-align:center;">
+                    <div style="font-size:24px;">🌡️</div>
+                    <div>기온</div>
+                    <div style="font-weight:bold; font-size:18px;">{t1h}℃</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown(
+                f"""
+                <div style="border:1px solid #ddd; border-radius:8px; padding:10px; text-align:center;">
+                    <div style="font-size:24px;">💧</div>
+                    <div>습도</div>
+                    <div style="font-weight:bold; font-size:18px;">{reh}%</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        with col3:
+            wind_deg = f" ({vec}°)" if vec is not None else ""
+            st.markdown(
+                f"""
+                <div style="border:1px solid #ddd; border-radius:8px; padding:10px; text-align:center;">
+                    <div style="font-size:24px;">💨</div>
+                    <div>풍속/풍향</div>
+                    <div style="font-weight:bold; font-size:18px;">{wsd} m/s / {wind_dir}{wind_deg}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        precipitation = f"{pty_desc}"
+        if rn1 is not None and rn1 > 0:
+            precipitation += f" (최근 1시간 {rn1}mm)"
+        st.markdown(
+            f"""
+            <div style="
+                border:2px solid #1E90FF; 
+                border-radius:12px; 
+                background-color:#E6F0FF; 
+                padding:15px; 
+                margin-top:20px; 
+                text-align:center;
+                font-size:20px;
+                font-weight:bold;
+                color:#1E90FF;
+            ">
+                ☔ 강수: {precipitation}
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown(f"<div style='text-align:right; font-size:12px; color:#666;'>{dt_str} 기준</div>", unsafe_allow_html=True)
+
 
     st.subheader("실시간 요약")
     st.markdown(summary)
