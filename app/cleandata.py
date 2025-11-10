@@ -96,13 +96,13 @@ def show_cleandata():
     # 수동 실행 버튼
     if st.button("수동 학습 실행"):
         with st.spinner("모델 학습 중... 잠시만 기다려주세요"):
-            result = train_model()
+            train_model()
         st.success("학습이 완료되었습니다!")
         with open("outlier_fix/train_log.txt", "a") as f:
             f.write(f"{datetime.datetime.now()}\n")
 
     # 자동 실행 시작 버튼
-    if st.button("자동 학습 시작 (1분마다)"):
+    if st.button("자동 학습 시작"):
         start_scheduler()
 
     # 자동 실행 중지 버튼
@@ -125,7 +125,8 @@ def show_cleandata():
     upload_preclean()
 
     if st.button("보정하기"):
-        msg = correct_outlier()
+        with st.spinner("보정 중... 잠시만 기다려주세요"):
+            msg = correct_outlier()
         st.success("보정 작업이 완료되었습니다!")
         st.text(msg)  # 추가로 보정 위치 메시지 표시
         
