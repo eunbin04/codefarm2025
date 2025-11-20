@@ -8,16 +8,16 @@ from outlier_find.find_outlier import find_outlier
 
 def upload_preclean(uploaded_file):
     if uploaded_file is not None:
-        temp_path = f"temp/{uploaded_file.name}"
-        with open(temp_path, "wb") as f:
+        path = f"{uploaded_file.name}"
+        with open(path, "wb") as f:
             f.write(uploaded_file.getbuffer())
 
         if uploaded_file.type == 'text/csv':
-            df_raw, enc = read_csv_robust(temp_path)
+            df_raw, enc = read_csv_robust(path)
             df_clean = clean_for_analysis(df_raw)
             enc_used = enc
         else:
-            df_clean = pd.read_excel(temp_path)
+            df_clean = pd.read_excel(path)
             df_clean = clean_for_analysis(df_clean)
             enc_used = 'excel'
 
@@ -25,9 +25,26 @@ def upload_preclean(uploaded_file):
         df_clean.to_sql('farm_data', conn, if_exists='replace', index=False)
         conn.close()
 
-        return temp_path, enc_used, df_clean.tail()
+        return path, enc_used, df_clean.tail()
     else:
         return None, None, None
+    
+def get_table_list(db_path='codefarmdb.sqlite'):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tables = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return tables
+
+def export_table_to_file(table_name, db_path='codefarmdb.sqlite'):
+    conn = sqlite3.connect(db_path)
+    df = pd.read_sql(f"SELECT * FROM [{table_name}];", conn)
+    conn.close()
+    out_path = os.path.join(f"{table_name}.csv")
+    df.to_csv(out_path, index=False)
+    return out_path, df.tail()
+
 
 def process_file(file_path):
     settings = load_settings()
