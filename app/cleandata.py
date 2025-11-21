@@ -1,8 +1,8 @@
 # cleandata.py
 import streamlit as st
+import os
 from app_details.cleandata_train import manual_train, start_scheduler, stop_scheduler, get_train_log
 from app_details.cleandata_fixfile import upload_preclean, process_file, get_table_list, export_table_to_file
-import os
 
 def show_cleandata():
     st.title("✨ 데이터 보정")
@@ -26,7 +26,7 @@ def show_cleandata():
     st.markdown("---")
     st.subheader("🛠️ 클린 데이터 다운로드")
 
-    # 1. 파일 업로드
+    # 1. 파일 업로드 및 DB에 테이블명 = 업로드 파일명(확장자 제외)로 저장
     uploaded_file = st.file_uploader("데이터 파일 업로드", type=['csv','xlsx'])
     file_path, enc_used, df_preview = upload_preclean(uploaded_file)
 
@@ -35,7 +35,7 @@ def show_cleandata():
         st.dataframe(df_preview)
         st.success(f"데이터가 DB에 저장되었습니다! (인코딩: {enc_used})")
 
-    # 2. DB에 저장된 파일 선택 후 불러오기
+    # 2. DB 내 저장된 테이블(파일) 선택 UI
     tables = get_table_list()
     selected_table = st.selectbox("DB에 저장된 데이터 중 보정할 파일 선택", tables)
 
@@ -45,7 +45,7 @@ def show_cleandata():
         st.write("선택한 DB 데이터 미리보기(끝에서 5행)")
         st.dataframe(df_preview2)
 
-    # 보정 대상 파일 경로 결정 (업로드 or DB 선택)
+    # 3. 보정 대상 결정: 업로드한 파일 우선, 없으면 DB 선택한 파일 사용
     target_file_path = file_path if file_path else db_file_path
 
     if st.button("보정하기"):
@@ -54,6 +54,7 @@ def show_cleandata():
         else:
             with st.spinner("파일 보정 중..."):
                 fixed_file, msg = process_file(target_file_path)
+
             st.success("보정 작업이 완료되었습니다!")
             st.info(msg)
 

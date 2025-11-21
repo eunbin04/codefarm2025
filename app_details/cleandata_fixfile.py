@@ -22,12 +22,16 @@ def upload_preclean(uploaded_file):
             enc_used = 'excel'
 
         conn = sqlite3.connect('codefarmdb.sqlite')
-        df_clean.to_sql('farm_data', conn, if_exists='replace', index=False)
+
+        table_name = os.path.splitext(uploaded_file.name)[0]  # 파일명으로 테이블명 지정
+        df_clean.to_sql(table_name, conn, if_exists='replace', index=False)
+
         conn.close()
 
         return path, enc_used, df_clean.tail()
     else:
         return None, None, None
+
     
 def get_table_list(db_path='codefarmdb.sqlite'):
     conn = sqlite3.connect(db_path)
