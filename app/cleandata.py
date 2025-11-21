@@ -2,7 +2,7 @@
 import streamlit as st
 import os
 from app_details.cleandata_train import manual_train, start_scheduler, stop_scheduler, get_train_log
-from app_details.cleandata_fixfile import upload_preclean, process_file, get_table_list, export_table_to_file
+from app_details.cleandata_fixfile import upload_preclean, process_file, get_table_list, export_table_to_df
 
 def show_cleandata():
     st.title("✨ 데이터 보정")
@@ -41,7 +41,7 @@ def show_cleandata():
 
     db_file_path = None
     if selected_table:
-        db_file_path, df_preview2 = export_table_to_file(selected_table)
+        db_file_path, df_preview2 = export_table_to_df(selected_table)
         st.write("선택한 DB 데이터 미리보기(끝에서 5행)")
         st.dataframe(df_preview2)
 

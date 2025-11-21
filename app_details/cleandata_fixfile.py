@@ -41,13 +41,11 @@ def get_table_list(db_path='codefarmdb.sqlite'):
     conn.close()
     return tables
 
-def export_table_to_file(table_name, db_path='codefarmdb.sqlite'):
+def export_table_to_df(table_name, db_path='codefarmdb.sqlite'):
     conn = sqlite3.connect(db_path)
     df = pd.read_sql(f"SELECT * FROM [{table_name}];", conn)
     conn.close()
-    out_path = os.path.join(f"{table_name}.csv")
-    df.to_csv(out_path, index=False)
-    return out_path, df.tail()
+    return df, df.tail()
 
 
 def process_file(file_path):
