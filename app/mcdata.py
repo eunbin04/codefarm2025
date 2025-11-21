@@ -20,7 +20,7 @@ def load_mcdata():
 
 
 def show_mcdata():
-    st.title(':seedling: 미기후 정보')
+    st.title('🌿 미기후 데이터')
 
     st.markdown("---")
 

@@ -38,19 +38,19 @@ st.sidebar.markdown(button_style, unsafe_allow_html=True)
 if st.sidebar.button('🏠 홈'):
     set_page('홈')
 
-with st.sidebar.expander("📈 대시보드", expanded=True):
-    if st.button('클린 데이터'):
-        set_page('클린 데이터')
+with st.sidebar.expander("🗂️ 대시보드", expanded=True):
+    if st.button('데이터 보정'):
+        set_page('데이터 보정')
     if st.button('VPD 데이터'):
         set_page('VPD 데이터')
 
-with st.sidebar.expander("🌿 모니터링", expanded=True):
+with st.sidebar.expander("📈 모니터링", expanded=True):
     if st.button('기상 정보'):
         set_page('기상 정보')
-    if st.button('미기후 정보'):
-        set_page('미기후 정보')
-    if st.button('배지 정보'):
-        set_page('배지 정보')
+    if st.button('미기후 데이터'):
+        set_page('미기후 데이터')
+    if st.button('근권부 데이터'):
+        set_page('근권부 데이터')
 
 if st.sidebar.button('🚨 경고'):
     set_page('알림')
@@ -61,15 +61,15 @@ if st.sidebar.button('⚙️ 설정'):
 # 페이지별 화면 표시
 if st.session_state.page == '홈':
     show_home()
-elif st.session_state.page == '클린 데이터':
+elif st.session_state.page == '데이터 보정':
     show_cleandata()
 elif st.session_state.page == 'VPD 데이터':
     show_vpd()
 elif st.session_state.page == '기상 정보':
     show_weather()
-elif st.session_state.page == '미기후 정보':
+elif st.session_state.page == '미기후 데이터':
     show_mcdata()
-elif st.session_state.page == '배지 정보':
+elif st.session_state.page == '근권부 데이터':
     show_mediadata()
 elif st.session_state.page == '알림':
     show_alarms()

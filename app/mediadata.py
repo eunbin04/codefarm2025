@@ -20,7 +20,7 @@ def load_mediadata():
 
 
 def show_mediadata():
-    st.title(':seedling: 배지 정보')
+    st.title('🌱 근권부 데이터')
 
     st.markdown("---")
 

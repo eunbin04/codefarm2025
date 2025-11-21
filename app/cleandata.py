@@ -5,7 +5,7 @@ from app_details.cleandata_fixfile import upload_preclean, process_file, get_tab
 import os
 
 def show_cleandata():
-    st.title("✨ 클린 데이터")
+    st.title("✨ 데이터 보정")
     st.markdown("---")
     st.subheader("🎓 모델 학습")
 
