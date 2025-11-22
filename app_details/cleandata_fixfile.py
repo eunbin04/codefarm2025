@@ -43,7 +43,7 @@ def export_table_to_df(table_name, db_path='codefarmdb.sqlite'):
     return df, df.tail()
 
 def process_table_df(df, temp_index, humi_index, light_index):
-    from outlier_find.find_outlier import find_outlier_df
+    from outlier_find.find_full import find_outlier_df
     from outlier_fix.predict_full import correct_outlier_df
     # 이상치 탐지 (index별로)
     df_found = find_outlier_df(df, temp_index, humi_index, light_index)
