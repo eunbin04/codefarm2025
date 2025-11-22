@@ -76,7 +76,7 @@ def show_mcdata():
 
     st.markdown("---")
 
-    st.subheader("📊 데이터 정보")
+    st.subheader("📊 데이터 통계")
     # desc = filtered[selected_vars].describe().T[['mean', 'min', 'max']]
     # desc.columns = ['평균', '최소', '최대']
     st.dataframe(filtered[selected_vars].describe())
