@@ -1,10 +1,20 @@
 # cleandata_train.py
-import streamlit as st
 import schedule
 import threading
 import time
 from outlier_fix.train_models import train_model
 from utils import get_korea_time
+import json
+import os
+
+SETTINGS_FILE = "config/settings.json"
+
+def load_auto_train_time():
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            settings = json.load(f)
+            return settings.get("auto_train_time", "02:00")
+    return "02:00"
 
 scheduler_running = False
 scheduler_thread = None
@@ -26,10 +36,12 @@ def start_scheduler():
         return "이미 자동 실행 중입니다."
     scheduler_running = True
     schedule.clear()
-    schedule.every(1).minutes.do(job)
+    target_time = load_auto_train_time()
+    t_hour, t_minute = target_time.split(":")
+    schedule.every().day.at(f"{t_hour}:{t_minute}").do(job)
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
-    return "자동 학습이 시작되었습니다! (1분마다 반복)"
+    return f"자동 학습이 시작되었습니다! ({target_time}마다 실행)"
 
 def stop_scheduler():
     global scheduler_running

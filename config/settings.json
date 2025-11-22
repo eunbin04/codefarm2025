@@ -1,8 +1,9 @@
 {
     "farm_name": "CODEFARM 온실",
-    "alert_enabled": true,
-    "update_interval": 30,
+    "alert_enabled": false,
+    "daily_stat_time": "08:24",
+    "auto_train_time": "03:00",
+    "t_location": 1,
     "h_location": 3,
-    "r_location": 4,
-    "t_location": 1
+    "r_location": 4
 }
