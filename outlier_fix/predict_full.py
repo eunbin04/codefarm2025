@@ -1,124 +1,71 @@
 # outlier_fix/predict_full.py
 import pandas as pd
 import joblib
-import openpyxl
+import numpy as np
 
-file_name = 'data/mc_copy.xlsx'  
-h_location = 3
-r_location = 4
-t_location = 1
+def correct_outlier_df(df, temp_index, humi_index, light_index):
+    cols = df.columns.tolist()
+    temp_col = cols[temp_index]
+    humi_col = cols[humi_index]
+    light_col = cols[light_index]
+    time_col = 'date_time' if 'date_time' in df.columns else cols[0]  # 날짜 컬럼이 있으면 활용
 
-array = [name for _, name in sorted([
-    (h_location, 'Humidity'),
-    (t_location, 'Temperature'),
-    (r_location, 'Solar_Radiation')
-])]
+    # 1. 특징 생성
+    df_copy = df.copy()
+    if time_col in df_copy.columns:
+        df_copy['hour'] = pd.to_datetime(df_copy[time_col]).dt.hour
+        df_copy['minute'] = pd.to_datetime(df_copy[time_col]).dt.minute
+    else:
+        df_copy['hour'] = 0
+        df_copy['minute'] = 0
 
-# (사용자 정의) 읽어올 열 인덱스
-use_cols = [0, h_location,r_location, t_location]
-# (사용자 정의) 실제 엑셀 저장 위치
-col_map = {
-    'Humidity': h_location + 1,
-    'Solar_Radiation': r_location + 1,
-    'Temperature': t_location + 1,
-}
+    # Lag Feature
+    df_copy[f'{temp_col}_lag_1'] = df_copy[temp_col].shift(1)
+    df_copy[f'{humi_col}_lag_1'] = df_copy[humi_col].shift(1)
+    df_copy[f'{light_col}_lag_1'] = df_copy[light_col].shift(1)
 
-# --- 0. 엑셀 파일 불러오기 (Pandas) ---
-try:
-    df = pd.read_excel(file_name, header=0, usecols=use_cols)
-    df.columns = ['Timestamp']+array
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-    df['Humidity'] = pd.to_numeric(df['Humidity'], errors='coerce')
-    df['Solar_Radiation'] = pd.to_numeric(df['Solar_Radiation'], errors='coerce')
-    df['Temperature'] = pd.to_numeric(df['Temperature'], errors='coerce')
-except FileNotFoundError:
-    print(f"오류: {file_name} 파일을 찾을 수 없습니다.")
-    exit()
-except Exception as e:
-    print(f"엑셀 파일 로드 중 오류 발생: {e}")
-    exit()
-
-# --- 1. 특징 공학 (Feature Engineering) ---
-# 예측에 필요한 특징을 전체 df에 대해 생성합니다.
-df['hour'] = df['Timestamp'].dt.hour
-df['minute'] = df['Timestamp'].dt.minute
-df['temp_lag_1'] = df['Temperature'].shift(1)
-df['humi_lag_1'] = df['Humidity'].shift(1)
-df['solar_lag_1'] = df['Solar_Radiation'].shift(1)
-
-# Lag 특징 생성으로 인한 첫 행 NaN은 예측에서 제외 (학습 때도 제외했으므로)
-df = df.dropna(subset=['temp_lag_1', 'humi_lag_1', 'solar_lag_1'])
-
-# --- 2. 모델 및 엑셀 파일 '먼저' 로드하기 ---
-# 속도를 위해 모델과 엑셀 워크북을 '한 번만' 엽니다.
-try:
-    models = {
-        'Temperature': joblib.load('model_Temperature.pkl'),
-        'Humidity': joblib.load('model_Humidity.pkl'),
-        'Solar_Radiation': joblib.load('model_Solar_Radiation.pkl')
-    }
-    # (openpyxl) 엑셀 파일 열기 (쓰기 전용)
-    wb = openpyxl.load_workbook(file_name)
-    ws = wb.active
-except FileNotFoundError as e:
-    print(f"오류: 모델 파일 또는 {file_name}을(를) 찾을 수 없습니다. {e}")
-    exit()
-except Exception as e:
-    print(f"모델/파일 로드 중 오류: {e}")
-    exit()
-
-# 학습에 사용된 전체 특징 리스트 정의
-all_analysis_cols = ['Temperature', 'Humidity', 'Solar_Radiation',
-                     'hour', 'minute', 'temp_lag_1', 'humi_lag_1',
-                     'solar_lag_1']
-
-target_list = ['Temperature', 'Humidity', 'Solar_Radiation']
-changes_made = False  # 수정 사항이 있는지 확인하는 깃발
-
-# --- 3. '모든 결측치'를 찾아 반복 보정 ---
-
-for target_to_predict in target_list:
-
-    # (1) 현재 타겟(예: 'Temperature')에 결측치가 있는 '모든 행'을 찾습니다.
-    nan_rows = df[df[target_to_predict].isnull()]
-
-    if nan_rows.empty:
-        continue  # 결측치가 없으면 다음 타겟(습도)으로 넘어감
-
-    # (2) 결측치가 있다면, 필요한 모델과 특징 리스트를 준비합니다.
-    model = models.get(target_to_predict)
-    features = [col for col in all_analysis_cols if col != target_to_predict]
-    excel_col = col_map.get(target_to_predict)
-
-    if model is None or excel_col is None:
-        print(f"경고: {target_to_predict}의 모델 또는 엑셀 열 정보가 없습니다. 건너뜁니다.")
-        continue
-
-    # (3) (★핵심★) 결측치가 있는 '각 행'을 순회하며 예측/수정
-    for original_nan_index, row_data in nan_rows.iterrows():
-        try:
-            # (pandas 인덱스로 엑셀 행 번호 계산)
-            excel_row = original_nan_index + 2  # (헤더 1행 + 0-index 1)
-
-            # (예측에 필요한 특징 준비)
-            X_predict = row_data[features].values.reshape(1, -1)
-
-            # (예측)
-            predicted_value = model.predict(X_predict)
-
-            # (★수정★) '파일 저장'이 아닌 '메모리'에 있는 엑셀 객체(ws)에 값을 씁니다.
-            ws.cell(row=excel_row, column=excel_col).value = predicted_value[0]
-
-            changes_made = True  # 수정했다고 표시
-
-        except Exception as e:
-            print(f"오류: {original_nan_index}행 ({target_to_predict}) 보정 실패: {e}")
-
-# --- 4.'마지막에 한 번만' 저장 ---
-if changes_made:
+    # 2. 모델 로드 (파일명은 관례에 따라 조절)
     try:
-        wb.save(file_name)
+        models = {
+            temp_col: joblib.load(f'outlier_fix/trained_models/model_Temperature.pkl'),
+            humi_col: joblib.load(f'outlier_fix/trained_models/model_Humidity.pkl'),
+            light_col: joblib.load(f'outlier_fix/trained_models/model_Solar_Radiation.pkl')
+        }
     except Exception as e:
-        print(f"오류: {file_name} 저장 실패. {e}")
-# else:
-# print("수정할 결측치가 없습니다.")
+        return df_copy, f"모델 로드 실패: {e}"
+
+    analysis_cols = [temp_col, humi_col, light_col,
+                     'hour', 'minute',
+                     f'{temp_col}_lag_1', f'{humi_col}_lag_1', f'{light_col}_lag_1']
+
+    target_list = [temp_col, humi_col, light_col]
+    changes_made = False
+
+    df_pred = df_copy.dropna(subset=[f'{temp_col}_lag_1', f'{humi_col}_lag_1', f'{light_col}_lag_1'])
+
+    for target in target_list:
+        nan_rows = df_pred[df_pred[target].isnull()]
+        if nan_rows.empty:
+            continue
+        model = models.get(target)
+        features = [col for col in analysis_cols if col != target]
+        for idx, row in nan_rows.iterrows():
+            if row[features].isnull().any():
+                continue  # 입력값 결측 존재시 예측 안함
+            try:
+                X_pred = np.array(row[features]).reshape(1, -1)
+                pred_value = model.predict(X_pred)
+                df_copy.at[idx, target] = pred_value[0]
+                changes_made = True
+            except Exception as e:
+                print(f"예측 실패: {idx}-{target}, {e}")
+
+    msg = "모든 결측치 보정 완료" if changes_made else "수정할 결측치 없음"
+    return df_copy, msg
+
+# (아래는 모듈 실행용 샘플, 실제 서비스에서는 사용 안함)
+if __name__ == "__main__":
+    df = pd.read_csv("sample.csv")
+    fixed, msg = correct_outlier_df(df, 1, 2, 3)
+    print(msg)
+    print(fixed.tail())

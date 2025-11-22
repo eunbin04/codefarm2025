@@ -3,8 +3,6 @@ import pandas as pd
 import os
 import sqlite3
 from precleaning.incoding import read_csv_robust, clean_for_analysis
-from outlier_fix.predict import correct_outlier, load_settings
-from outlier_find.find_outlier import find_outlier
 
 def upload_preclean(uploaded_file):
     if uploaded_file is not None:
@@ -22,17 +20,14 @@ def upload_preclean(uploaded_file):
             enc_used = 'excel'
 
         conn = sqlite3.connect('codefarmdb.sqlite')
-
-        table_name = os.path.splitext(uploaded_file.name)[0]  # 파일명으로 테이블명 지정
+        table_name = os.path.splitext(uploaded_file.name)[0]
         df_clean.to_sql(table_name, conn, if_exists='replace', index=False)
-
         conn.close()
 
         return path, enc_used, df_clean.tail()
     else:
         return None, None, None
 
-    
 def get_table_list(db_path='codefarmdb.sqlite'):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -47,16 +42,11 @@ def export_table_to_df(table_name, db_path='codefarmdb.sqlite'):
     conn.close()
     return df, df.tail()
 
-
-def process_file(file_path):
-    settings = load_settings()
-    location_map = {
-        settings['t_location']: 'Temperature',
-        settings['h_location']: 'Humidity',
-        settings['r_location']: 'Solar_Radiation'
-    }
-    outlier_path = f"temp/outlier_{os.path.basename(file_path)}"
-    fixed_file = f"temp/fixed_{os.path.splitext(os.path.basename(file_path))[0]}.xlsx"
-    find_outlier(file_path, output_path=outlier_path, location_map=location_map)
-    msg = correct_outlier(input_path=outlier_path, output_path=fixed_file, settings=settings)
-    return fixed_file, msg
+def process_table_df(df, temp_index, humi_index, light_index):
+    from outlier_find.find_outlier import find_outlier_df
+    from outlier_fix.predict_full import correct_outlier_df
+    # 이상치 탐지 (index별로)
+    df_found = find_outlier_df(df, temp_index, humi_index, light_index)
+    # 이상치 보정 (index별로)
+    df_fixed, msg = correct_outlier_df(df_found, temp_index, humi_index, light_index)
+    return df_fixed, msg

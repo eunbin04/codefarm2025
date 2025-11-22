@@ -8,3 +8,4 @@ streamlit-leaflet
 openpyxl
 chardet
 seaborn
+xlsxwriter

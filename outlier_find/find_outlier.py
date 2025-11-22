@@ -1,62 +1,30 @@
-# find_outlier.py
-import os
+# outlier_find/find_outlier.py
 import pandas as pd
 import numpy as np
 from scipy.stats import zscore
 
+def find_outlier_df(df, temp_index, humi_index, light_index):
+    cols = df.columns.tolist()
+    temp_col = cols[temp_index]
+    humi_col = cols[humi_index]
+    light_col = cols[light_index]
 
-def find_outlier(file_path, output_path=None, location_map=None):
-    if location_map is None:
-        location_map = {
-            0: 'date_time',
-            1: 'Temperature',
-            3: 'Humidity',
-            4: 'Light'
-        }
-    location_map = {k: v for k, v in location_map.items() if k is not None}
-
-    sorted_items = sorted(location_map.items(), key=lambda x: x[0])
-    use_cols = [idx for idx, _ in sorted_items]
-    col_names = [name for _, name in sorted_items]
-
-    base_name = os.path.splitext(os.path.basename(file_path))[0]
-    dir_name = os.path.dirname(file_path)
-
-    if output_path is None:
-        output_dir = os.path.join(dir_name, "outliers")
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, f"{base_name}_delete_error.csv")
-    else:
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-    # --- 원본 백업 파일 경로 생성 ---
-    backup_path = os.path.join(dir_name, f"{base_name}_original_backup.csv")
-
-    # --- 1. 원본 읽기 (백업용) ---
-    raw = pd.read_csv(file_path)
-    
-    # --- 2. 원본 백업 저장 ---
-    raw.to_csv(backup_path, index=False, encoding='utf-8-sig')
-    print(f"📦 원본 데이터 백업 파일 저장 완료: {backup_path}")
-
-    # --- 3. 백업 파일에서 분석용 데이터 읽기 ---
-    dataset = pd.read_csv(backup_path, usecols=use_cols)
-    dataset.columns = col_names
-
+    dataset = df.copy()
     if 'date_time' in dataset.columns:
         dataset['date_time'] = pd.to_datetime(dataset['date_time'])
         dataset = dataset.set_index('date_time')
+    else:
+        # 임의 인덱스 사용 (불리면 보정로직이 바뀔 수 있음)
+        dataset.index = pd.RangeIndex(len(dataset))
 
-    for col in ['Temperature', 'Humidity', 'Light']:
-        if col in dataset.columns:
-            dataset[col] = pd.to_numeric(dataset[col], errors='coerce')
+    for col in [temp_col, humi_col, light_col]:
+        dataset[col] = pd.to_numeric(dataset[col], errors='coerce')
 
-    temp = dataset['Temperature'] if 'Temperature' in dataset.columns else pd.Series(index=dataset.index, dtype='float')
-    hum = dataset['Humidity'] if 'Humidity' in dataset.columns else pd.Series(index=dataset.index, dtype='float')
-    light = dataset['Light'] if 'Light' in dataset.columns else pd.Series(index=dataset.index, dtype='float')
+    temp = dataset[temp_col]
+    hum = dataset[humi_col]
+    light = dataset[light_col]
 
-
-    # 2. 이상치 탐지
+    # 1. 온도/습도 이상치 탐지
     TEMP_MIN, TEMP_MAX = -10, 40
     HUM_MIN, HUM_MAX = 0, 100
 
@@ -82,43 +50,39 @@ def find_outlier(file_path, output_path=None, location_map=None):
     temp_fault = (temp_physical | cond_temp_diff_adj).fillna(False)
     hum_fault = (hum_physical | cond_hum_diff_adj).fillna(False)
 
+    # 2. 광 이상치 탐지
     LIGHT_MIN, LIGHT_MAX = 0, 20000
     LIGHT_UPPER_SUS = 5400
 
     light_physical = (light < LIGHT_MIN) | (light > LIGHT_MAX)
-
-    hourly_mean = light.groupby(light.index.hour).mean()
-    hour = dataset.index.hour
-    light_hourly_mean = pd.Series(hour, index=dataset.index).map(hourly_mean)
-
-    MEAN_EPS = 50
-    upper_ratio = 1.7
-    lower_ratio = 0.3
-
-    valid_hour = light_hourly_mean > MEAN_EPS
-
-    light_too_high_rel = valid_hour & (light > light_hourly_mean * upper_ratio)
-    light_too_low_rel = valid_hour & (light < light_hourly_mean * lower_ratio)
-
+    if 'date_time' in df.columns:
+        hourly_mean = light.groupby(dataset.index.hour).mean()
+        hour = dataset.index.hour
+        light_hourly_mean = pd.Series(hour, index=dataset.index).map(hourly_mean)
+        valid_hour = light_hourly_mean > 50
+        upper_ratio = 1.7
+        lower_ratio = 0.3
+        light_too_high_rel = valid_hour & (light > light_hourly_mean * upper_ratio)
+        light_too_low_rel = valid_hour & (light < light_hourly_mean * lower_ratio)
+    else:
+        # 시간별 평균 불가 시 단순 값
+        light_too_high_rel = pd.Series(False, index=dataset.index)
+        light_too_low_rel = pd.Series(False, index=dataset.index)
     light_upper5400 = light > LIGHT_UPPER_SUS
 
     light_outlier = (light_physical | light_too_high_rel | light_too_low_rel | light_upper5400).fillna(False)
 
-    cleaned = raw.copy()
+    # 3. NaN 마킹 처리
+    dataset.loc[temp_fault.values, temp_col] = np.nan
+    dataset.loc[hum_fault.values, humi_col] = np.nan
+    dataset.loc[light_outlier.values, light_col] = np.nan
 
-    if 'Temperature' in cleaned.columns:
-        cleaned.loc[temp_fault.values, 'Temperature'] = np.nan
-    if 'Humidity' in cleaned.columns:
-        cleaned.loc[hum_fault.values, 'Humidity'] = np.nan
-    if 'Light' in cleaned.columns:
-        cleaned.loc[light_outlier.values, 'Light'] = np.nan
+    # 인덱스를 복구 (다운로드를 위해)
+    dataset = dataset.reset_index()
+    return dataset
 
-    cleaned.to_csv(output_path, index=False, encoding='utf-8-sig')
-
-    print(f"최종 오류 구간 빈칸 처리 CSV 저장 완료: {output_path}")
-
-    return output_path
-
+# (아래는 모듈 실행용 샘플, 실제 서비스에서는 사용 안함)
 if __name__ == "__main__":
-    # 예시 실행용 기본값
-    find_outlier('data/priva.csv')
+    df = pd.read_csv("sample.csv")
+    result = find_outlier_df(df, 1, 2, 3)
+    print(result.tail())
