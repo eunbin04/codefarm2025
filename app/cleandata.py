@@ -8,43 +8,10 @@ from app_details.cleandata_fixfile import (
 )
 
 def show_cleandata():
-    st.title("✨ 데이터 보정")
-    st.markdown("---")
-    st.subheader("🎓 모델 학습")
-
-    if st.button("▶️ 수동 학습 실행"):
-        with st.spinner("모델 학습 중... 잠시만 기다려주세요"):
-            msg = manual_train()
-        st.success(msg)
-
-    if st.button("🔄 자동 학습 시작"):
-        st.success(start_scheduler())
-
-    if st.button("⏹️ 자동 학습 중지"):
-        st.success(stop_scheduler())
-
-    ### 학습 로그 확인
-    recent_logs = get_train_log()[:3]
-    all_logs = get_train_log()
-
-    st.markdown("#### 학습 실행 로그")
-
-    if recent_logs:
-        for log in recent_logs:
-            st.write(log.strip())
-    else:
-        st.info("아직 실행 로그가 없습니다.")
-
-    with st.expander("전체 실행 로그 보기"):
-        if all_logs:
-            for log in all_logs:
-                st.write(log.strip())
-        else:
-            st.info("실행 로그가 없습니다.")
-
+    st.title("🛠️ 데이터 보정")
 
     st.markdown("---")
-    st.subheader("🛠️ 클린 데이터 다운로드")
+    st.subheader("✨ 클린 데이터 다운로드")
 
     uploaded_file = st.file_uploader("데이터 파일 업로드", type=['csv','xlsx'])
     file_path, enc_used, df_preview = upload_preclean(uploaded_file)
@@ -97,6 +64,40 @@ def show_cleandata():
                 file_name=f"{selected_table}_cleaned.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
+
+    st.markdown("---")
+    st.subheader("🎓 모델 학습")
+
+    if st.button("▶️ 수동 학습 실행"):
+        with st.spinner("모델 학습 중... 잠시만 기다려주세요"):
+            msg = manual_train()
+        st.success(msg)
+
+    if st.button("🔄 자동 학습 시작"):
+        st.success(start_scheduler())
+
+    if st.button("⏹️ 자동 학습 중지"):
+        st.success(stop_scheduler())
+
+    ### 학습 로그 확인
+    recent_logs = get_train_log()[:3]
+    all_logs = get_train_log()
+
+    st.markdown("#### 학습 실행 로그")
+
+    if recent_logs:
+        for log in recent_logs:
+            st.write(log.strip())
+    else:
+        st.info("아직 실행 로그가 없습니다.")
+
+    with st.expander("전체 실행 로그 보기"):
+        if all_logs:
+            for log in all_logs:
+                st.write(log.strip())
+        else:
+            st.info("실행 로그가 없습니다.")
 
 
 if __name__ == "__main__":
