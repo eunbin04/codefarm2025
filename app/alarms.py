@@ -4,61 +4,83 @@ import pandas as pd
 import random
 from datetime import datetime, timedelta
 
-def color_status(val):
-    if val == "해결됨":
-        color = "lightgreen"
-    elif val == "미해결":
-        color = "lightcoral"
-    elif val == "센서 오류":
-        color = "#FFD700"
+
+def color_status(val, correction):
+    if correction != "":
+        color = "lightgreen"  # 자동 보정 완료
     else:
-        color = ""
+        color = "lightcoral"  # 미완료
     return f"background-color: {color}"
 
-def show_alarms():
-    st.title("🚨 경고")
 
-    st.markdown("---")
-
-    alarm_types = ["이상치", "결측치", "VPD 경고"]
-    states = ["해결됨", "미해결"]
-    descriptions = {
-        "이상치": ["온도 100℃ 감지", "CO2 농도 이상치", "조도 센서 이상"],
-        "결측치": ["습도 센서에서 몇 분동안 결측 발생", "토양수분 센서 데이터 누락"],
-        "VPD 경고": ["적정 VPD 범위 초과", "VPD 급격 변화 감지"]
-    }
-
+def initialize_alarm_data():
+    alarm_types = ["온도", "습도", "광"]
+    states = ["이상치", "결측치"]
     base_time = datetime.strptime("2025-11-04 08:00", "%Y-%m-%d %H:%M")
 
+    random.seed(42)
+
+    alarm_data = {
+        "시간": [],
+        "알림 유형": [],
+        "상태": [],
+        "설명": [],
+        "보정내역": []
+    }
+    for i in range(10):
+        alarm_type = random.choice(alarm_types)
+        state = random.choice(states)
+        time = base_time + timedelta(minutes=45 * i)
+        alarm_data["시간"].append(time.strftime("%Y-%m-%d %H:%M"))
+        alarm_data["알림 유형"].append(alarm_type)
+        alarm_data["상태"].append(state)
+        alarm_data["설명"].append(f"{alarm_type} 솔루션{random.randint(1, 2)}")
+        
+        # 항상 아래 한 줄은 append 하도록, 조건문에서 분리
+        if random.random() < 0.5:
+            correction = ""
+        else:
+            correction = f"자동 보정 ({time.strftime('%Y-%m-%d %H:%M:%S')})"
+        alarm_data["보정내역"].append(correction)
+
+    return pd.DataFrame(alarm_data)
+
+
+
+def show_alarms():
+    st.title("🚨 알림 기록")
+    st.markdown("---")
+
     if "alarm_data" not in st.session_state:
-        random.seed(42)
-        alarm_data = {
-            "시간": [],
-            "알림 유형": [],
-            "상태": [],
-            "설명": []
-        }
-        for i in range(10):
-            alarm_type = random.choice(alarm_types)
-            state = random.choice(states)
-            description = random.choice(descriptions[alarm_type])
-            time = base_time + timedelta(minutes=45 * i)
-            alarm_data["시간"].append(time.strftime("%Y-%m-%d %H:%M"))
-            alarm_data["알림 유형"].append(alarm_type)
-            alarm_data["상태"].append(state)
-            alarm_data["설명"].append(description)
-        st.session_state.alarm_data = pd.DataFrame(alarm_data)
+        st.session_state.alarm_data = initialize_alarm_data()
 
     df_alarms = st.session_state.alarm_data
 
-    status_filter = st.selectbox("알림 상태 선택", options=["전체", "해결됨", "미해결", "센서 오류"])
+    # 자동 보정 대상 선정 로직은 삭제하여 새로고침 시 변경되지 않음
 
-    if status_filter != "전체":
-        filtered_df = df_alarms[df_alarms["상태"] == status_filter]
+    correction_filter = st.selectbox(
+        "자동 보정 여부 선택",
+        options=["전체", "미완료", "완료"]
+    )
+
+    if correction_filter == "완료":
+        filtered_df = df_alarms[df_alarms["보정내역"] != ""]
+    elif correction_filter == "미완료":
+        filtered_df = df_alarms[df_alarms["보정내역"] == ""]
     else:
         filtered_df = df_alarms
 
-    st.dataframe(filtered_df.style.map(color_status, subset=["상태"]))
+    filtered_df = filtered_df.copy()
+    filtered_df["시간_dt"] = pd.to_datetime(filtered_df["시간"], format="%Y-%m-%d %H:%M")
+    filtered_df = filtered_df.sort_values(by="시간_dt", ascending=False)
+    filtered_df = filtered_df.drop(columns=["시간_dt"])
+
+    styled_df = filtered_df.style.apply(
+        lambda row: [color_status(row["상태"], row["보정내역"]) if col == "상태" else "" for col in filtered_df.columns],
+        axis=1
+    )
+
+    st.dataframe(styled_df)
 
     st.subheader("알림 상세")
 
@@ -69,7 +91,7 @@ def show_alarms():
         selected_index = df_alarms[df_alarms["시간"] == selected_alert_time].index[0]
         selected_row = df_alarms.loc[selected_index]
 
-        border_color = "#4CAF50" if selected_row["상태"] == "해결됨" else ("#FFD700" if selected_row["상태"] == "센서 오류" else "#FF6347")
+        border_color = "#66C87F" if selected_row["보정내역"] != "" else "lightcoral"
 
         st.markdown(f"""
         <div style="
@@ -83,45 +105,21 @@ def show_alarms():
             <b>시간:</b> {selected_row['시간']}<br>
             <b>상태:</b> {selected_row['상태']}<br>
             <b>설명:</b> {selected_row['설명']}<br>
-        <ul>
-            {
-                "<li>센서 점검 필요</li><li>시스템 로그 확인</li>" 
-                if selected_row["상태"] == "미해결" 
-                else ("<li>센서 오류입니다.</li>" if selected_row["상태"] == "센서 오류" 
-                    else "<li>이미 해결된 알림입니다.</li>")
-            }
-        </ul>
+            <b>보정내역:</b> {selected_row['보정내역']}<br>
         </div>
         """, unsafe_allow_html=True)
 
-        col1, col2 = st.columns(2)
 
-        if selected_row["상태"] == "미해결":
-            # 초기값을 세션 상태에 저장 (없으면 False)
-            if "sensor_error_clicked" not in st.session_state:
-                st.session_state.sensor_error_clicked = False
-            if "resolved_clicked" not in st.session_state:
-                st.session_state.resolved_clicked = False
+        if 'manual_correction_done' not in st.session_state:
+            st.session_state.manual_correction_done = False
 
-            with col1:
-                if st.button("센서 오류", key="sensor_error"):
-                    st.session_state.sensor_error_clicked = True
-                    st.session_state.resolved_clicked = False
-                    st.session_state.alarm_data.at[selected_index, "상태"] = "센서 오류"
-                if st.session_state.sensor_error_clicked:
-                    st.success("상태가 저장되었습니다!")
+        if selected_row["보정내역"] == "":
+            if st.button("보정하기"):
+                st.session_state.manual_correction_done = True
+                st.session_state.alarm_data.at[selected_index, "보정내역"] = f"수동 보정 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
 
-            with col2:
-                if st.button("해결 완료", key="resolved"):
-                    st.session_state.resolved_clicked = True
-                    st.session_state.sensor_error_clicked = False
-                    st.session_state.alarm_data.at[selected_index, "상태"] = "해결됨"
-                if st.session_state.resolved_clicked:
-                    st.success("상태가 저장되었습니다!")
-
-            
-
-
-
-
+        if st.session_state.manual_correction_done:
+            st.success("보정이 완료되어 반영되었습니다.")
+            # 상태 변경으로 강제 UI 재실행 유도
+            st.session_state.manual_correction_done = not st.session_state.manual_correction_done
 
