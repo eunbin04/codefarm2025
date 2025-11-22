@@ -23,8 +23,25 @@ def show_cleandata():
     if st.button("⏹️ 자동 학습 중지"):
         st.success(stop_scheduler())
 
-    st.markdown("#### 이전 학습 실행 로그")
-    st.text(get_train_log())
+    ### 학습 로그 확인
+    recent_logs = get_train_log()[:3]
+    all_logs = get_train_log()
+
+    st.markdown("#### 학습 실행 로그")
+
+    if recent_logs:
+        for log in recent_logs:
+            st.write(log.strip())
+    else:
+        st.info("아직 실행 로그가 없습니다.")
+
+    with st.expander("전체 실행 로그 보기"):
+        if all_logs:
+            for log in all_logs:
+                st.write(log.strip())
+        else:
+            st.info("실행 로그가 없습니다.")
+
 
     st.markdown("---")
     st.subheader("🛠️ 클린 데이터 다운로드")

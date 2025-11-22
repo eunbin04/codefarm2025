@@ -1,9 +1,10 @@
 # cleandata_train.py
-import datetime
+import streamlit as st
 import schedule
 import threading
-from outlier_fix.train_models import train_model
 import time
+from outlier_fix.train_models import train_model
+from utils import get_korea_time
 
 scheduler_running = False
 scheduler_thread = None
@@ -11,7 +12,7 @@ scheduler_thread = None
 def job():
     train_model()
     with open("outlier_fix/train_log.txt", "a") as f:
-        f.write(f"{datetime.datetime.now()}\n")
+        f.write(f"{get_korea_time().strftime('%Y-%m-%d %H:%M:%S')} (KST)\n")
 
 def run_scheduler():
     global scheduler_running
@@ -39,13 +40,13 @@ def stop_scheduler():
 def manual_train():
     train_model()
     with open("outlier_fix/train_log.txt", "a") as f:
-        f.write(f"{datetime.datetime.now()}\n")
+        f.write(f"{get_korea_time().strftime('%Y-%m-%d %H:%M:%S')} (KST)\n")
     return "학습이 완료되었습니다!"
 
 def get_train_log():
     try:
         with open("outlier_fix/train_log.txt", "r") as f:
-            log_content = f.read()
-        return log_content
+            logs = f.readlines()
+        return logs[::-1]  # 최신순
     except FileNotFoundError:
-        return "아직 실행 로그가 없습니다."
+        return []
