@@ -1,6 +1,9 @@
 # mcdata.py
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import numpy as np
 
 # 데이터 불러오기(mc.csv)
 def load_mcdata():
@@ -20,7 +23,14 @@ def load_mcdata():
 
 
 def show_mcdata():
+    # 페이지 기본 설정 (옵션)
+    st.set_page_config(
+        page_title="미기후 데이터 대시보드",
+        layout="wide",
+    )
+
     st.title('🌿 미기후 데이터')
+    st.caption("기간을 선택하고, 센서별로 데이터를 탐색해보세요.")
 
     st.markdown("---")
 
@@ -37,7 +47,7 @@ def show_mcdata():
 
     # 사용자가 선택할 기본값: 전체 범위
     default_start = min_date
-    default_end = max_date
+    default_end = min_date
 
     # 날짜 입력 받기 (달력 형태)
     date_range = st.date_input(
@@ -54,29 +64,182 @@ def show_mcdata():
         start_date = end_date = date_range
 
     # 날짜 범위에 맞게 데이터 필터링 (시간 포함 인덱스이므로 날짜 조건으로 필터)
-    filtered = data.loc[(data.index.date >= start_date) & (data.index.date <= end_date)]
+    filtered = data.loc[
+        (data.index.date >= start_date) & (data.index.date <= end_date)
+    ]
 
     filtered = filtered.dropna(axis=1, how='all')
 
-    selected_vars = st.multiselect(
-        '측정 변수 선택',
-        options=filtered.columns.tolist(),
-        default=filtered.columns[:6].tolist()
-    )
+    # ----------------- 상단 요약 카드 영역 -----------------
+    st.markdown("### 📌 요약 지표")
 
-    # 비어있는 열 제거 후 남은 컬럼 리스트에 맞게 selected_vars 필터링
-    selected_vars = [var for var in selected_vars if var in filtered.columns]
+    if not filtered.empty:
+        # 기본: 첫 3개 컬럼으로 카드 구성 (필요시 조정)
+        num_cols = min(3, len(filtered.columns))
+        summary_cols = filtered.columns[:num_cols]
+        cols = st.columns(num_cols)
 
-    # 기간 내의 선택된 변수 전체 원본 데이터 CSV로 변환
-    csv = filtered[selected_vars].to_csv().encode('utf-8')
-    st.download_button(label=":material/download: CSV 다운로드", data=csv, file_name='sensor_data.csv', mime='text/csv')
+        for c, col_name in zip(cols, summary_cols):
+            series = filtered[col_name].dropna()
+            if series.empty:
+                current_val = "-"
+                mean_val = "-"
+            else:
+                current_val = round(series.iloc[-1], 3)
+                mean_val = round(series.mean(), 3)
 
-    # 데이터 미리보기
-    st.dataframe(filtered[selected_vars].head())
+            with c:
+                st.metric(
+                    label=col_name,
+                    value=current_val,
+                    help=f"선택 기간 평균값: {mean_val}",
+                )
+    else:
+        st.info("선택한 기간에 데이터가 없습니다.")
 
     st.markdown("---")
 
-    st.subheader("📊 데이터 통계")
-    # desc = filtered[selected_vars].describe().T[['mean', 'min', 'max']]
-    # desc.columns = ['평균', '최소', '최대']
-    st.dataframe(filtered[selected_vars].describe())
+    # ----------------- 탭 구성 -----------------
+    tab_data, tab_stats, tab_detail = st.tabs(["📄 데이터", "📊 통계", "📈 상세 그래프"])
+
+    # 공통: 선택 가능한 변수 리스트
+    all_columns = filtered.columns.tolist()
+
+    # 세션 상태로 '상세 보기용 변수' 유지
+    if "detail_var" not in st.session_state:
+        st.session_state["detail_var"] = None
+
+    # ================== 1) 데이터 탭 ==================
+    with tab_data:
+        st.subheader("🔍 변수 선택 및 다운로드")
+
+        if all_columns:
+            selected_vars = st.multiselect(
+                '측정 변수 선택',
+                options=all_columns,
+                default=all_columns[: min(6, len(all_columns))]
+            )
+
+            # 비어있는 열 제거 후 남은 컬럼 리스트에 맞게 selected_vars 필터링
+            selected_vars = [var for var in selected_vars if var in filtered.columns]
+
+            if selected_vars:
+                # 기간 내의 선택된 변수 전체 원본 데이터 CSV로 변환
+                csv = filtered[selected_vars].to_csv().encode('utf-8')
+                st.download_button(
+                    label=":material/download: CSV 다운로드",
+                    data=csv,
+                    file_name='sensor_data.csv',
+                    mime='text/csv'
+                )
+
+                # 라인 차트 (여러 변수 동시)
+                # st.markdown("#### ⏱️ 시계열 그래프")
+                # st.line_chart(filtered[selected_vars])
+
+                # 데이터 미리보기
+                st.markdown("#### 👀 데이터 미리보기")
+                st.dataframe(
+                    filtered[selected_vars].head(200),
+                    use_container_width=True,
+                )
+            else:
+                st.warning("최소 1개의 변수를 선택해주세요.")
+        else:
+            st.warning("표시할 변수가 없습니다. 기간을 다시 선택해보세요.")
+
+    # ================== 2) 통계 탭 ==================
+    with tab_stats:
+        st.subheader("📊 데이터 통계 요약")
+
+        if all_columns:
+            stats_vars = st.multiselect(
+                "통계를 보고 싶은 변수 선택",
+                options=all_columns,
+                default=all_columns[: min(6, len(all_columns))]
+            )
+            stats_vars = [v for v in stats_vars if v in filtered.columns]
+
+            if stats_vars:
+                desc = filtered[stats_vars].describe().T
+                desc = desc[['mean', 'min', 'max', 'std', '25%', '50%', '75%']]
+                desc.rename(
+                    columns={
+                        'mean': '평균',
+                        'min': '최소',
+                        'max': '최대',
+                        'std': '표준편차',
+                        '25%': '25분위',
+                        '50%': '중앙값',
+                        '75%': '75분위',
+                    },
+                    inplace=True,
+                )
+                st.dataframe(desc, use_container_width=True)
+            else:
+                st.info("통계를 볼 변수를 선택해주세요.")
+        else:
+            st.warning("표시할 변수가 없습니다. 기간을 다시 선택해보세요.")
+
+    # ================== 3) 상세 그래프 탭 ==================
+    with tab_detail:
+        st.subheader("📈 변수별 상세 그래프")
+
+        if all_columns:
+            st.markdown("**변수 선택 (버튼 클릭 시 아래에 크게 표시됩니다)**")
+            cols_btn = st.columns(4)
+            for i, col_name in enumerate(all_columns):
+                if cols_btn[i % 4].button(col_name):
+                    st.session_state["detail_var"] = col_name
+
+            detail_var = st.session_state.get("detail_var", None)
+            if detail_var and detail_var in filtered.columns:
+                st.markdown(f"#### 🎯 선택된 변수: `{detail_var}`")
+
+                series = filtered[detail_var].dropna()
+                if not series.empty:
+                    # IQR 계산
+                    Q1 = series.quantile(0.25)
+                    Q3 = series.quantile(0.75)
+                    IQR = Q3 - Q1
+                    lower_bound_iqr = Q1 - 1.5 * IQR
+                    upper_bound_iqr = Q3 + 1.5 * IQR
+
+                    # Plotly 그래프 생성
+                    fig = go.Figure()
+
+                    # 시계열 라인 차트 추가
+                    fig.add_trace(go.Scatter(
+                        x=series.index,
+                        y=series.values,
+                        mode='lines',
+                        name='값',
+                        line=dict(color="#E53D3D")
+                    ))
+
+                    # IQR 범위 영역 채우기
+                    fig.add_trace(go.Scatter(
+                        x=np.concatenate([series.index, series.index[::-1]]),
+                        y=np.concatenate([[lower_bound_iqr]*len(series), [upper_bound_iqr]*len(series[::-1])]),
+                        fill='toself',
+                        fillcolor='rgba(197, 226, 181, 0.3)',
+                        line=dict(color='rgba(255,255,255,0)'),
+                        hoverinfo="skip",
+                        showlegend=True,
+                        name='IQR 범위',
+                    ))
+
+                    fig.update_layout(
+                        xaxis_title='시간',
+                        yaxis_title=detail_var,
+                        hovermode='x unified'
+                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+                else:
+                    st.info("선택한 변수에 데이터가 없습니다.")
+            else:
+                st.info("상세히 보고 싶은 변수를 위에서 선택해주세요.")
+        else:
+            st.warning("표시할 변수가 없습니다. 기간을 다시 선택해보세요.")

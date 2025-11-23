@@ -9,3 +9,4 @@ openpyxl
 chardet
 seaborn
 xlsxwriter
+plotly
