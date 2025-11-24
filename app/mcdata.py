@@ -71,33 +71,35 @@ def show_mcdata():
     filtered = filtered.dropna(axis=1, how='all')
 
     # ----------------- 상단 요약 카드 영역 -----------------
-    st.markdown("### 📌 요약 지표")
+    st.markdown("### 📌 실시간 정보")
 
     if not filtered.empty:
-        # 기본: 첫 3개 컬럼으로 카드 구성 (필요시 조정)
-        num_cols = min(3, len(filtered.columns))
-        summary_cols = filtered.columns[:num_cols]
+        # 요약 지표에 co2 변수 포함 (있으면 추가)
+        summary_cols = list(filtered.columns[:3])  # 기존 첫 3개 컬럼
+        if 'co2' in filtered.columns and 'co2' not in summary_cols:
+            summary_cols.append('co2')
+
+        # 간혹 중복 제거
+        summary_cols = list(dict.fromkeys(summary_cols))
+
+        num_cols = len(summary_cols)
         cols = st.columns(num_cols)
 
         for c, col_name in zip(cols, summary_cols):
             series = filtered[col_name].dropna()
             if series.empty:
                 current_val = "-"
-                mean_val = "-"
             else:
-                current_val = round(series.iloc[-1], 3)
-                mean_val = round(series.mean(), 3)
+                current_val = round(series.iloc[-1], 3)  # 가장 마지막 행 값 (실시간값)
 
             with c:
                 st.metric(
                     label=col_name,
-                    value=current_val,
-                    help=f"선택 기간 평균값: {mean_val}",
+                    value=current_val
                 )
     else:
         st.info("선택한 기간에 데이터가 없습니다.")
 
-    st.markdown("---")
 
     # ----------------- 탭 구성 -----------------
     tab_data, tab_stats, tab_detail = st.tabs(["📄 데이터", "📊 통계", "📈 상세 그래프"])
@@ -126,6 +128,12 @@ def show_mcdata():
             if selected_vars:
                 # 기간 내의 선택된 변수 전체 원본 데이터 CSV로 변환
                 csv = filtered[selected_vars].to_csv().encode('utf-8')
+                # 데이터 미리보기
+                st.dataframe(
+                    filtered[selected_vars].head(200),
+                    use_container_width=True,
+                )
+                
                 st.download_button(
                     label=":material/download: CSV 다운로드",
                     data=csv,
@@ -133,16 +141,7 @@ def show_mcdata():
                     mime='text/csv'
                 )
 
-                # 라인 차트 (여러 변수 동시)
-                # st.markdown("#### ⏱️ 시계열 그래프")
-                # st.line_chart(filtered[selected_vars])
 
-                # 데이터 미리보기
-                st.markdown("#### 👀 데이터 미리보기")
-                st.dataframe(
-                    filtered[selected_vars].head(200),
-                    use_container_width=True,
-                )
             else:
                 st.warning("최소 1개의 변수를 선택해주세요.")
         else:
