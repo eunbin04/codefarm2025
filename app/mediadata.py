@@ -7,6 +7,7 @@ import time
 def show_mediadata():
 
     st.title("🌱 스마트 온실 실시간 현황")
+    st.markdown("---")
 
     # DB에서 데이터 가져오는 함수
     def load_data():
