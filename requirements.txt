@@ -10,5 +10,4 @@ chardet
 seaborn
 xlsxwriter
 plotly
-koreanize-matplotlib
 matplotlib
