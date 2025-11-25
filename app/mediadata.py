@@ -2,46 +2,57 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
+import time
 
-DB_PATH = 'sensor_data.db'
+def show_mediadata():
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS measurements (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            humidity REAL,
-            temperature REAL,
-            irradiance REAL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    st.title("🌱 스마트 온실 실시간 현황")
 
+    # DB에서 데이터 가져오는 함수
+    def load_data():
+        conn = sqlite3.connect('sensor_data.db')
+        # 최신 데이터 1000개만 가져오기 (데이터가 많아지면 느려지므로 제한)
+        query = "SELECT * FROM measurements ORDER BY id DESC LIMIT 1000"
+        df = pd.read_sql(query, conn)
+        conn.close()
+        return df
 
-def get_latest_data(limit=50):
-    conn = sqlite3.connect(DB_PATH)
-    df = pd.read_sql_query(
-        f"SELECT * FROM measurements ORDER BY id DESC LIMIT {limit}", conn
-    )
-    conn.close()
-    return df
+    # 화면을 계속 갱신하기 위한 빈 공간 만들기
+    placeholder = st.empty()
 
-st.set_page_config(page_title='CODEFARM 센서 대시보드', page_icon=':seedling:')
-st.title("🌡️ 온습도, 광 센서 데이터 실시간 보기")
+    # 무한 반복하며 화면 갱신 (실시간 대시보드 느낌)
+    while True:
+        df = load_data()
+        
+        if not df.empty:
+            # 최신 값 1개 뽑기
+            latest = df.iloc[0]
 
-refresh_interval = st.slider('새로고침 간격(초)', 2, 30, 5)
-if st.button('새로고침'):
-    st.experimental_rerun()
+            with placeholder.container():
+                # 1. 상단 지표 (Metric) 표시
+                kpi1, kpi2, kpi3 = st.columns(3)
+                kpi1.metric(label="🌡️ 온도", value=f"{latest['temperature']} °C")
+                kpi2.metric(label="💧 습도", value=f"{latest['humidity']} %")
+                kpi3.metric(label="☀️ 일사량", value=f"{latest['irradiance']} W/m²")
 
-st.caption('최근 수집된 센서 데이터(최대 50건)')
-data = get_latest_data(50)
-st.dataframe(data)
+                # 2. 그래프 그리기 (최신순이라 그래프가 거꾸로 보일 수 있어 뒤집음)
+                df_chart = df.sort_values('id') 
+                
+                st.subheader("실시간 변화 그래프")
+                
+                # 3가지 데이터를 탭으로 나누어 보여주기
+                tab1, tab2, tab3 = st.tabs(["온도", "습도", "일사량"])
+                
+                with tab1:
+                    st.line_chart(df_chart, x='time_str', y='temperature', color='#FF5733')
+                with tab2:
+                    st.line_chart(df_chart, x='time_str', y='humidity', color='#33C1FF')
+                with tab3:
+                    st.line_chart(df_chart, x='time_str', y='irradiance', color='#FFC300')
 
-st.subheader('📊 데이터 그래프')
-st.line_chart(data[['humidity', 'temperature', 'irradiance']])
+                # 3. 데이터 표 (원시 데이터)
+                with st.expander("상세 데이터 보기"):
+                    st.dataframe(df)
 
-st.experimental_set_query_params()
-st.write(f"데이터 건수: {len(data)}")
+        # 2초마다 갱신 (아두이노 전송 주기와 맞춤)
+        time.sleep(2)
