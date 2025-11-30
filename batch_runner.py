@@ -79,5 +79,5 @@ def main_loop(interval_sec=60):
 
 
 if __name__ == "__main__":
-    # 20초마다 실행
-    main_loop(interval_sec=20)
+    # 60초마다 실행
+    main_loop(interval_sec=60)
