@@ -3,7 +3,7 @@
     "alert_enabled": false,
     "daily_stat_time": "08:24",
     "auto_train_time": "03:00",
-    "t_location": 1,
-    "h_location": 3,
+    "t_location": 3,
+    "h_location": 2,
     "r_location": 4
 }
