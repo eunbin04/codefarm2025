@@ -4,28 +4,24 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
+import os
 from matplotlib import font_manager, rcParams
 
-
 def set_korean_font():
-    # 1) 컨테이너/리눅스 환경에서 설치 가능한 한글 폰트 경로 예시
-    #    실제 설치된 폰트에 맞게 경로를 조정해야 한다.
-    font_paths = [
-        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",   # 우분투에서 자주 쓰는 경로
-        "/usr/share/fonts/truetype/nanum/NanumGothicCoding.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"    # 한글이 안되면 임시로 라틴 폰트라도
-    ]
+    # 1. ttf 절대경로 (지금 환경 기준)
+    font_path = "/workspaces/codefarm2025/fonts/NanumGothic.ttf"
 
-    for path in font_paths:
-        try:
-            font = font_manager.FontProperties(fname=path)
-            rcParams["font.family"] = font.get_name()
-            rcParams["axes.unicode_minus"] = False
-            break
-        except Exception:
-            continue
+    # 2. Matplotlib 폰트 매니저에 직접 등록
+    if os.path.exists(font_path):
+        font_manager.fontManager.addfont(font_path)
+        font_prop = font_manager.FontProperties(fname=font_path)
+        font_name = font_prop.get_name()  # ttf 내부에 정의된 실제 이름
+
+        # 3. 전역 폰트 설정
+        rcParams["font.family"] = font_name
+        rcParams["axes.unicode_minus"] = False
+    else:
+        rcParams["axes.unicode_minus"] = False
 
 
 def calc_vpd(temp_c, rh):
@@ -69,7 +65,6 @@ def show_vpd():
     cbar = fig.colorbar(c, ax=ax, boundaries=levels)
     cbar.set_ticks([0.4, 1.15, 2.5])
     cbar.set_ticklabels(['낮음', '적정', '높음'])
-    cbar.ax.set_ylabel('VPD 상태')
 
     ax.set_xlabel('온도 (°C)')
     ax.set_ylabel('상대습도 (%)')
