@@ -1,12 +1,12 @@
-# mediadata.py
+# nowdata.py
 import streamlit as st
 import sqlite3
 import pandas as pd
 import time
 
-def show_mediadata():
+def show_nowdata():
 
-    st.title("🌱 스마트 온실 실시간 현황")
+    st.title("🌿 실시간 데이터")
     st.markdown("---")
 
     # DB에서 데이터 가져오는 함수

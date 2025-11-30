@@ -1,11 +1,10 @@
-# mcdata.py
+# perdata.py
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import numpy as np
 
-# 데이터 불러오기(mc.csv)
+
 def load_mcdata():
     df = pd.read_csv('data/mc.csv', encoding='utf-8')
 
@@ -22,19 +21,12 @@ def load_mcdata():
     return df
 
 
-def show_mcdata():
-    # 페이지 기본 설정 (옵션)
-    st.set_page_config(
-        page_title="미기후 데이터 대시보드",
-        layout="wide",
-    )
+def show_perdata():
 
-    st.title('🌿 미기후 데이터')
+    st.title('📅 기간별 데이터')
     st.caption("기간을 선택하고, 센서별로 데이터를 탐색해보세요.")
 
     st.markdown("---")
-
-    st.subheader("📅 기간별 데이터")
 
     data = load_mcdata()  # 전체 데이터 불러오기
 
@@ -47,7 +39,7 @@ def show_mcdata():
 
     # 사용자가 선택할 기본값: 전체 범위
     default_start = min_date
-    default_end = min_date
+    default_end = max_date
 
     # 날짜 입력 받기 (달력 형태)
     date_range = st.date_input(
@@ -70,36 +62,7 @@ def show_mcdata():
 
     filtered = filtered.dropna(axis=1, how='all')
 
-    # ----------------- 상단 요약 카드 영역 -----------------
-    st.markdown("### 📌 실시간 정보")
-
-    if not filtered.empty:
-        # 요약 지표에 co2 변수 포함 (있으면 추가)
-        summary_cols = list(filtered.columns[:3])  # 기존 첫 3개 컬럼
-        if 'co2' in filtered.columns and 'co2' not in summary_cols:
-            summary_cols.append('co2')
-
-        # 간혹 중복 제거
-        summary_cols = list(dict.fromkeys(summary_cols))
-
-        num_cols = len(summary_cols)
-        cols = st.columns(num_cols)
-
-        for c, col_name in zip(cols, summary_cols):
-            series = filtered[col_name].dropna()
-            if series.empty:
-                current_val = "-"
-            else:
-                current_val = round(series.iloc[-1], 3)  # 가장 마지막 행 값 (실시간값)
-
-            with c:
-                st.metric(
-                    label=col_name,
-                    value=current_val
-                )
-    else:
-        st.info("선택한 기간에 데이터가 없습니다.")
-
+    st.markdown("")
 
     # ----------------- 탭 구성 -----------------
     tab_data, tab_stats, tab_detail = st.tabs(["📄 데이터", "📊 통계", "📈 상세 그래프"])
@@ -113,7 +76,7 @@ def show_mcdata():
 
     # ================== 1) 데이터 탭 ==================
     with tab_data:
-        st.subheader("🔍 변수 선택 및 다운로드")
+        st.subheader("📄 데이터 다운로드")
 
         if all_columns:
             selected_vars = st.multiselect(
@@ -153,7 +116,7 @@ def show_mcdata():
 
         if all_columns:
             stats_vars = st.multiselect(
-                "통계를 보고 싶은 변수 선택",
+                "변수 선택",
                 options=all_columns,
                 default=all_columns[: min(6, len(all_columns))]
             )
@@ -185,7 +148,6 @@ def show_mcdata():
         st.subheader("📈 변수별 상세 그래프")
 
         if all_columns:
-            st.markdown("**변수 선택 (버튼 클릭 시 아래에 크게 표시됩니다)**")
             cols_btn = st.columns(4)
             for i, col_name in enumerate(all_columns):
                 if cols_btn[i % 4].button(col_name):
