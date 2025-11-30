@@ -93,7 +93,7 @@ def show_perdata():
                 csv = filtered[selected_vars].to_csv().encode('utf-8')
                 # 데이터 미리보기
                 st.dataframe(
-                    filtered[selected_vars].head(200),
+                    filtered[selected_vars],
                     use_container_width=True,
                 )
                 
