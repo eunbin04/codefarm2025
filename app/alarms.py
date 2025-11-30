@@ -24,7 +24,6 @@ def initialize_alarm_data():
         "시간": [],
         "알림 유형": [],
         "상태": [],
-        "설명": [],
         "보정내역": []
     }
     for i in range(10):
@@ -34,7 +33,6 @@ def initialize_alarm_data():
         alarm_data["시간"].append(time.strftime("%Y-%m-%d %H:%M"))
         alarm_data["알림 유형"].append(alarm_type)
         alarm_data["상태"].append(state)
-        alarm_data["설명"].append(f"{alarm_type} 솔루션{random.randint(1, 2)}")
         
         # 항상 아래 한 줄은 append 하도록, 조건문에서 분리
         if random.random() < 0.5:
@@ -104,7 +102,6 @@ def show_alarms():
             <h3>{selected_row['알림 유형']}</h3>
             <b>시간:</b> {selected_row['시간']}<br>
             <b>상태:</b> {selected_row['상태']}<br>
-            <b>설명:</b> {selected_row['설명']}<br>
             <b>보정내역:</b> {selected_row['보정내역']}<br>
         </div>
         """, unsafe_allow_html=True)
