@@ -26,7 +26,6 @@ def show_nowdata():
         df = load_data()
         
         if not df.empty:
-            # 최신 값 1개 뽑기
             latest = df.iloc[0]
 
             with placeholder.container():
@@ -52,8 +51,10 @@ def show_nowdata():
                     st.line_chart(df_chart, x='time_str', y='irradiance', color='#FFC300')
 
                 # 3. 데이터 표 (원시 데이터)
+                if {'server_sent'}.issubset(df.columns):
+                     df = df.drop(columns=['server_sent'])
                 with st.expander("상세 데이터 보기"):
                     st.dataframe(df)
 
-        # 2초마다 갱신 (아두이노 전송 주기와 맞춤)
-        time.sleep(2)
+        # 60초마다 갱신
+        time.sleep(60)
