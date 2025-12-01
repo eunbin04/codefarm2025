@@ -2,82 +2,102 @@
 import sqlite3
 import time
 import pandas as pd
-import os, json
+import os
+import json
+from datetime import datetime
+import pytz
+
 from outlier_find.find import find_outliers_and_mark
 from outlier_fix.predict import correct_last_row_outlier
-from app_details.alarms_db_utils import (
-    init_alarms_db,
+from app_details.alarms_db import (
+    initialize_alarms_db,
     insert_alarm_rows,
-    update_alarm_with_correction,
-    insert_corrected_rows,
+    update_alarm_correction,
+    save_corrected_sensor_data,
+    load_settings,
+    get_last_processed_measurement_id,
+    save_last_processed_measurement_id,
 )
 
-SENSOR_DB_PATH = "sensor_data.db"  # 원본 센서 DB
+SENSOR_DB_PATH = "sensor_data.db"
+SETTINGS_FILE = "config/settings.json"
+
+KST = pytz.timezone("Asia/Seoul")
 
 
-def load_recent_sensor_data(limit=1000):
-    """sensor_data.db에서 최근 데이터 일부를 읽어옴"""
+def load_new_sensor_data(last_id=None, batch_size=1000):
     conn = sqlite3.connect(SENSOR_DB_PATH)
-    query = """
-        SELECT * FROM measurements
-        ORDER BY id DESC
-        LIMIT ?
-    """
-    df = pd.read_sql(query, conn, params=(limit,))
+    if last_id is None:
+        query = """
+            SELECT * FROM measurements
+            ORDER BY id ASC
+            LIMIT ?
+        """
+        df = pd.read_sql(query, conn, params=(batch_size,))
+    else:
+        query = """
+            SELECT * FROM measurements
+            WHERE id > ?
+            ORDER BY id ASC
+            LIMIT ?
+        """
+        df = pd.read_sql(query, conn, params=(last_id, batch_size))
     conn.close()
-    # 최신순으로 읽었으니, 시간 순 정렬
-    df = df.sort_values("id")
     return df
 
 
 def main_loop(interval_sec=60):
-    # alarms.db 테이블 생성
-    init_alarms_db()
-
-    SETTINGS_FILE = "config/settings.json"
+    initialize_alarms_db()
 
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
             settings = json.load(f)
     else:
-        settings = {"t_location": 1, "h_location": 3, "r_location": 4}
+        settings = load_settings()
 
-    t_idx = settings["t_location"]
-    h_idx = settings["h_location"]
-    r_idx = settings["r_location"]
+    alert_enabled = settings.get("alert_enabled", True)
+    print(f"시스템 시작 - 알림 활성화: {alert_enabled}")
+
+    last_id = get_last_processed_measurement_id()
 
     while True:
-        # 1. sensor_data에서 최근 데이터 읽기
-        df = load_recent_sensor_data(limit=1000)
-        if df.empty:
+        if not alert_enabled:
+            print("알림 비활성화 상태 - 5분 대기")
+            time.sleep(300)
+            continue
+
+        df_new = load_new_sensor_data(last_id=last_id, batch_size=1000)
+
+        if df_new.empty:
             time.sleep(interval_sec)
             continue
 
-        # 2. 이상치 탐지 + NaN 마킹 + alarm_df 생성
-        cleaned_df, alarm_df = find_outliers_and_mark(df, datetime_col="time_str")
+        # 전체 df 중 가장 큰 id를 이번 배치의 마지막으로 기록
+        max_id = int(df_new["id"].max())
 
-        # 3. 자동 보정 (마지막 행 기준)
+        cleaned_df, alarm_df = find_outliers_and_mark(df_new, datetime_col="time_str")
         corrected_df, msg = correct_last_row_outlier(cleaned_df, settings=settings)
 
-        # 4. alarms.db에 알림 로그 쌓기
         if not alarm_df.empty:
             insert_alarm_rows(alarm_df)
+            print(f"알림 {len(alarm_df)}건 저장")
 
-        # 5. alarms.db에 보정 상세(msg) 반영
         if msg != "보정할 이상치가 없습니다.":
-            # 마지막 행의 time_str
-            last_time_str = str(corrected_df.iloc[-1, 0])  # 0번 컬럼: time_str
-            correction_status = f"자동 보정 ({time.strftime('%Y-%m-%d %H:%M:%S')})"
+            last_time_str = str(corrected_df.iloc[-1, 0])
+            now_kst = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
+            correction_status = f"자동 보정 ({now_kst})"
             correction_detail = msg
-            update_alarm_with_correction(last_time_str, correction_status, correction_detail)
+            update_alarm_correction(last_time_str, correction_status, correction_detail)
+            print(f"보정 완료: {msg}")
 
-        # 6. corrected_sensor 테이블에 보정 결과 저장
-        insert_corrected_rows(corrected_df, t_idx=t_idx, h_idx=h_idx, r_idx=r_idx)
+        save_corrected_sensor_data(corrected_df, settings=settings)
 
-        # 7. 다음 루프까지 대기
+        save_last_processed_measurement_id(max_id)
+        print(f"배치 처리 완료 - {datetime.now(KST).strftime('%H:%M:%S')} (last_id={max_id})")
+
+        last_id = max_id
         time.sleep(interval_sec)
 
 
 if __name__ == "__main__":
-    # 60초마다 실행
     main_loop(interval_sec=60)

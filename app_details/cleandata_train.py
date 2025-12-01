@@ -3,7 +3,7 @@ import schedule
 import threading
 import time
 from outlier_fix.train_models import train_model
-from utils import get_korea_time
+from app_details.utils import get_korea_time
 import json
 import os
 

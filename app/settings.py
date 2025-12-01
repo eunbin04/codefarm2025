@@ -2,7 +2,7 @@
 import streamlit as st
 import json
 import os
-from utils import get_korea_time
+from app_details.utils import get_korea_time
 
 SETTINGS_FILE = "config/settings.json"
 

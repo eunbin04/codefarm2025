@@ -49,8 +49,7 @@ def show_perdata():
         max_value=max_date
     )
 
-    # date_input에서 단일 날짜 선택 시를 대비해 튜플로 처리
-    if isinstance(date_range, tuple) or isinstance(date_range, list):
+    if isinstance(date_range, (tuple, list)) and len(date_range) == 2:
         start_date, end_date = date_range
     else:
         start_date = end_date = date_range
@@ -94,7 +93,7 @@ def show_perdata():
                 # 데이터 미리보기
                 st.dataframe(
                     filtered[selected_vars],
-                    use_container_width=True,
+                    width='stretch',
                 )
                 
                 st.download_button(
@@ -137,7 +136,7 @@ def show_perdata():
                     },
                     inplace=True,
                 )
-                st.dataframe(desc, use_container_width=True)
+                st.dataframe(desc, width='stretch')
             else:
                 st.info("통계를 볼 변수를 선택해주세요.")
         else:
@@ -196,7 +195,7 @@ def show_perdata():
                         hovermode='x unified'
                     )
 
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
 
                 else:
                     st.info("선택한 변수에 데이터가 없습니다.")

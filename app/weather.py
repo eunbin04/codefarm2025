@@ -4,7 +4,7 @@ import math
 import requests
 import pandas as pd
 from datetime import timedelta
-from utils import get_korea_time
+from app_details.utils import get_korea_time
 
 
 def latlon_to_xy(lat, lon):
