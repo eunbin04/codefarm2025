@@ -305,7 +305,7 @@ def show_alarms():
     st.dataframe(
         styled_df,
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("---")
@@ -385,7 +385,7 @@ def show_alarms():
             prev_df = pd.read_sql(q, conn)
             conn.close()
             if not prev_df.empty:
-                st.dataframe(prev_df, use_container_width=True)
+                st.dataframe(prev_df, width='stretch')
             else:
                 st.caption("아직 보정된 센서 데이터가 없습니다.")
         except Exception as e:
