@@ -28,21 +28,25 @@ def initialize_alarms_db():
     conn = sqlite3.connect(ALARMS_DB_PATH)
     cursor = conn.cursor()
 
+    # 알림 테이블: 요구하신 6개 항목 + 보정상세/설명 + 생성시각
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS alarms (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            time_str TEXT,
-            alarm_type TEXT,
-            status TEXT,
-            correction_status TEXT,
-            correction_detail TEXT,
-            description TEXT,
+            time_str TEXT,             -- 수집일(문자열)
+            alarm_type TEXT,           -- '온도','습도','광'
+            value REAL,                -- 실제 값
+            status TEXT,               -- '이상치','결측치' 등
+            correction_status TEXT,    -- '자동 보정 (시각)', '수동 보정 (시각)'
+            correction_value REAL,     -- 보정값
+            correction_detail TEXT,    -- 보정 상세 설명
+            description TEXT,          -- 알림 설명
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
 
+    # 보정된 센서 데이터 미리보기용
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS corrected_sensor (
@@ -96,20 +100,23 @@ def save_last_processed_measurement_id(last_id: int):
 
 
 def load_alarm_data_from_db():
+    """알람 목록 화면용 데이터 로드"""
     try:
         conn = sqlite3.connect(ALARMS_DB_PATH)
         query = """
             SELECT
                 time_str,
                 alarm_type,
+                value,
                 status,
                 correction_status,
+                correction_value,
                 correction_detail,
                 description,
                 datetime(created_at, 'localtime') AS created_at_kst
             FROM alarms
             ORDER BY created_at DESC
-            LIMIT 100
+            LIMIT 200
         """
         df = pd.read_sql(query, conn)
         conn.close()
@@ -117,10 +124,12 @@ def load_alarm_data_from_db():
         if df.empty:
             return pd.DataFrame(
                 columns=[
-                    "시간",
+                    "수집일",
                     "알림 유형",
+                    "실제 값",
                     "상태",
                     "보정내역",
+                    "보정값",
                     "보정상세",
                     "설명",
                     "생성시각(KST)",
@@ -128,10 +137,12 @@ def load_alarm_data_from_db():
             )
 
         df.columns = [
-            "시간",
+            "수집일",
             "알림 유형",
+            "실제 값",
             "상태",
             "보정내역",
+            "보정값",
             "보정상세",
             "설명",
             "생성시각(KST)",
@@ -142,10 +153,12 @@ def load_alarm_data_from_db():
         st.error(f"알림 데이터 로드 중 오류 발생: {e}")
         return pd.DataFrame(
             columns=[
-                "시간",
+                "수집일",
                 "알림 유형",
+                "실제 값",
                 "상태",
                 "보정내역",
+                "보정값",
                 "보정상세",
                 "설명",
                 "생성시각(KST)",
@@ -154,6 +167,7 @@ def load_alarm_data_from_db():
 
 
 def save_alarm_to_db(alarm_data: dict):
+    """단일 알림 저장 (센서별 행 1개씩)"""
     try:
         conn = sqlite3.connect(ALARMS_DB_PATH)
         cursor = conn.cursor()
@@ -161,14 +175,17 @@ def save_alarm_to_db(alarm_data: dict):
         cursor.execute(
             """
             INSERT OR IGNORE INTO alarms
-            (time_str, alarm_type, status, correction_status, correction_detail, description)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (time_str, alarm_type, value, status,
+             correction_status, correction_value, correction_detail, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 alarm_data.get("time_str", ""),
                 alarm_data.get("alarm_type", ""),
+                alarm_data.get("value", None),
                 alarm_data.get("status", ""),
                 alarm_data.get("correction_status", ""),
+                alarm_data.get("correction_value", None),
                 alarm_data.get("correction_detail", ""),
                 alarm_data.get("description", ""),
             ),
@@ -183,30 +200,52 @@ def save_alarm_to_db(alarm_data: dict):
         return False
 
 
-def update_alarm_correction(time_str: str, correction_status: str, correction_detail: str):
+def insert_alarm_rows(alarm_df: pd.DataFrame):
+    """find_outliers_and_mark에서 만든 alarm_df(센서별 행)를 그대로 저장"""
+    for _, row in alarm_df.iterrows():
+        save_alarm_to_db(
+            {
+                "time_str": row["time_str"],
+                "alarm_type": row["alarm_type"],
+                "value": row["value"],
+                "status": row["status"],
+                "correction_status": "",
+                "correction_value": None,
+                "correction_detail": "",
+                "description": row["description"],
+            }
+        )
+
+
+def update_alarm_correction_with_value(
+    time_str: str,
+    alarm_type: str,
+    correction_status: str,
+    correction_value: float,
+    correction_detail: str,
+):
+    """자동/수동 보정 후 보정내역/보정값 업데이트"""
     try:
         conn = sqlite3.connect(ALARMS_DB_PATH)
         cursor = conn.cursor()
-
         cursor.execute(
             """
             UPDATE alarms
-            SET correction_status = ?, correction_detail = ?
-            WHERE time_str = ?
+            SET correction_status = ?, correction_value = ?, correction_detail = ?
+            WHERE time_str = ? AND alarm_type = ?
             """,
-            (correction_status, correction_detail, time_str),
+            (correction_status, correction_value, correction_detail, time_str, alarm_type),
         )
-
         conn.commit()
         conn.close()
         return cursor.rowcount > 0
-
     except Exception as e:
         st.error(f"알림 업데이트 중 오류 발생: {e}")
         return False
 
 
 def save_corrected_sensor_data(corrected_df: pd.DataFrame, settings=None):
+    """corrected_sensor 테이블 저장"""
     if settings is None:
         settings = load_settings()
 
@@ -243,21 +282,8 @@ def save_corrected_sensor_data(corrected_df: pd.DataFrame, settings=None):
     return True
 
 
-def insert_alarm_rows(alarm_df: pd.DataFrame):
-    for _, row in alarm_df.iterrows():
-        save_alarm_to_db(
-            {
-                "time_str": row["시간"],
-                "alarm_type": row["알림 유형"],
-                "status": row["상태"],
-                "correction_status": "",
-                "correction_detail": "",
-                "description": row["설명"],
-            }
-        )
-
-
 def color_status(val, correction):
+    # 상태/보정내역에 따라 색 지정
     if correction and correction != "":
         return "background-color: lightgreen;"
     return "background-color: lightcoral;"
