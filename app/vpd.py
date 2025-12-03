@@ -4,24 +4,6 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-import os
-from matplotlib import font_manager, rcParams
-
-def set_korean_font():
-    # 1. ttf 절대경로 (지금 환경 기준)
-    font_path = "/workspaces/codefarm2025/fonts/NanumGothic.ttf"
-
-    # 2. Matplotlib 폰트 매니저에 직접 등록
-    if os.path.exists(font_path):
-        font_manager.fontManager.addfont(font_path)
-        font_prop = font_manager.FontProperties(fname=font_path)
-        font_name = font_prop.get_name()  # ttf 내부에 정의된 실제 이름
-
-        # 3. 전역 폰트 설정
-        rcParams["font.family"] = font_name
-        rcParams["axes.unicode_minus"] = False
-    else:
-        rcParams["axes.unicode_minus"] = False
 
 
 def calc_vpd(temp_c, rh):
@@ -31,14 +13,16 @@ def calc_vpd(temp_c, rh):
 
 
 def show_vpd():
-    set_korean_font()
     st.title("🧮 VPD 계산기")
 
     st.markdown("---")
 
-    temp = st.slider("🌡️ 온도 (°C)", min_value=-10.0, max_value=40.0, value=25.0, step=0.1)
-    rh = st.slider("💧 상대습도 (%)", min_value=0.0, max_value=100.0, value=70.0, step=0.1)
-
+    # 수정된 number_input
+    col1, col2 = st.columns(2)
+    with col1:
+        temp = st.number_input("🌡️ 온도 (°C)", min_value=-20.0, max_value=60.0, value=25.0, step=1.0, format="%.1f")
+    with col2:
+        rh = st.number_input("💧 상대습도 (%)", min_value=0.0, max_value=100.0, value=70.0, step=1.0, format="%.1f")
     vpd = calc_vpd(temp, rh)
     st.metric(label="VPD", value=f"{vpd:.2f} kPa")
 
@@ -49,7 +33,7 @@ def show_vpd():
     else:
         st.error("비이상적 VPD입니다. 환경 조정 필요")
 
-    temps = np.linspace(-10, 40, 100)
+    temps = np.linspace(-20, 60, 100)
     rhs = np.linspace(0, 100, 100)
     T, RH = np.meshgrid(temps, rhs)
     VPD = 0.6108 * np.exp((17.27 * T) / (T + 237.3)) * (1 - RH / 100)
@@ -63,11 +47,11 @@ def show_vpd():
     contours = ax.contour(T, RH, VPD, levels=levels, colors='black', linewidths=0.7)
 
     cbar = fig.colorbar(c, ax=ax, boundaries=levels)
-    cbar.set_ticks([0.4, 1.15, 2.5])
-    cbar.set_ticklabels(['낮음', '적정', '높음'])
+    cbar.set_ticks([0.4, 1.15, 7.5])
+    cbar.set_ticklabels(['low', 'Optimal', 'high'])
 
-    ax.set_xlabel('온도 (°C)')
-    ax.set_ylabel('상대습도 (%)')
+    ax.set_xlabel('temperature (°C)')
+    ax.set_ylabel('humidity (%)')
 
     # 그리드 색과 스타일 변경
     ax.grid(color='gray', linestyle='--', linewidth=0.8)
@@ -80,7 +64,7 @@ def show_vpd():
     ax.axhline(y=rh, color='red', linestyle='-', linewidth=2, alpha=0.7)
 
     # 현재 위치 붉은 점으로 표시
-    ax.scatter(temp, rh, color='red', s=100, label=f'현재 VPD: {vpd:.2f} kPa')
+    ax.scatter(temp, rh, color='red', s=100, label=f'VPD: {vpd:.2f} kPa')
     ax.legend()
 
     st.pyplot(fig)
