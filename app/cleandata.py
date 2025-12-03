@@ -8,10 +8,10 @@ from app_details.cleandata_fixfile import (
 )
 
 def show_cleandata():
-    st.title("🛠️ 데이터 보정")
+    st.title("🗂️ 데이터 관리")
 
     st.markdown("---")
-    st.subheader("✨ 클린 데이터 다운로드")
+    st.subheader("📤 데이터 업로드")
 
     uploaded_file = st.file_uploader("데이터 파일 업로드", type=['csv','xlsx'])
     file_path, enc_used, df_preview = upload_preclean(uploaded_file)
@@ -20,6 +20,9 @@ def show_cleandata():
         st.write("전처리된 데이터 미리보기(끝에서 5행)")
         st.dataframe(df_preview)
         st.success(f"데이터가 DB에 저장되었습니다! (인코딩: {enc_used})")
+
+    st.markdown("---")
+    st.subheader("✨ 클린 데이터 다운로드")
 
     tables = get_table_list()
     selected_table = st.selectbox("DB에 저장된 데이터 중 보정할 파일 선택", tables)
