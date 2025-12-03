@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import os
 from matplotlib import font_manager, rcParams
-import koreanize_matplotlib
 
 def set_korean_font():
     # 1. ttf 절대경로 (지금 환경 기준)
