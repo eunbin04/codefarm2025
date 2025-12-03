@@ -1,4 +1,4 @@
-# outlier_find/find_outlier.py
+# outlier_find/find_full.py
 import pandas as pd
 import numpy as np
 from scipy.stats import zscore

@@ -1,4 +1,4 @@
-# alarms_db.py
+# app_details/alarms_db.py
 import pandas as pd
 import sqlite3
 import json
@@ -6,6 +6,7 @@ import os
 import streamlit as st
 from datetime import datetime
 import pytz
+
 
 ALARMS_DB_PATH = "alarms.db"
 SETTINGS_FILE = "config/settings.json"
@@ -28,7 +29,7 @@ def initialize_alarms_db():
     conn = sqlite3.connect(ALARMS_DB_PATH)
     cursor = conn.cursor()
 
-    # 알림 테이블: 요구하신 6개 항목 + 보정상세/설명 + 생성시각
+    # 알림 테이블: 6개 핵심 항목만 실제로 사용
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS alarms (
@@ -39,14 +40,12 @@ def initialize_alarms_db():
             status TEXT,               -- '이상치','결측치' 등
             correction_status TEXT,    -- '자동 보정 (시각)', '수동 보정 (시각)'
             correction_value REAL,     -- 보정값
-            correction_detail TEXT,    -- 보정 상세 설명
-            description TEXT,          -- 알림 설명
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
 
-    # 보정된 센서 데이터 미리보기용
+    # 보정된 센서 데이터 (현재 화면에선 사용 안 하지만 구조 유지)
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS corrected_sensor (
@@ -100,7 +99,7 @@ def save_last_processed_measurement_id(last_id: int):
 
 
 def load_alarm_data_from_db():
-    """알람 목록 화면용 데이터 로드"""
+    """알림 목록 화면용 데이터 로드 (6개 항목만 반환)"""
     try:
         conn = sqlite3.connect(ALARMS_DB_PATH)
         query = """
@@ -110,10 +109,7 @@ def load_alarm_data_from_db():
                 value,
                 status,
                 correction_status,
-                correction_value,
-                correction_detail,
-                description,
-                datetime(created_at, 'localtime') AS created_at_kst
+                correction_value
             FROM alarms
             ORDER BY created_at DESC
             LIMIT 200
@@ -130,9 +126,6 @@ def load_alarm_data_from_db():
                     "상태",
                     "보정내역",
                     "보정값",
-                    "보정상세",
-                    "설명",
-                    "생성시각(KST)",
                 ]
             )
 
@@ -143,9 +136,6 @@ def load_alarm_data_from_db():
             "상태",
             "보정내역",
             "보정값",
-            "보정상세",
-            "설명",
-            "생성시각(KST)",
         ]
         return df
 
@@ -159,9 +149,6 @@ def load_alarm_data_from_db():
                 "상태",
                 "보정내역",
                 "보정값",
-                "보정상세",
-                "설명",
-                "생성시각(KST)",
             ]
         )
 
@@ -176,8 +163,8 @@ def save_alarm_to_db(alarm_data: dict):
             """
             INSERT OR IGNORE INTO alarms
             (time_str, alarm_type, value, status,
-             correction_status, correction_value, correction_detail, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             correction_status, correction_value)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
                 alarm_data.get("time_str", ""),
@@ -186,8 +173,6 @@ def save_alarm_to_db(alarm_data: dict):
                 alarm_data.get("status", ""),
                 alarm_data.get("correction_status", ""),
                 alarm_data.get("correction_value", None),
-                alarm_data.get("correction_detail", ""),
-                alarm_data.get("description", ""),
             ),
         )
 
@@ -208,11 +193,9 @@ def insert_alarm_rows(alarm_df: pd.DataFrame):
                 "time_str": row["time_str"],
                 "alarm_type": row["alarm_type"],
                 "value": row["value"],
-                "status": row["status"],
+                "status": row["status"],        # '이상치' / '결측치'
                 "correction_status": "",
                 "correction_value": None,
-                "correction_detail": "",
-                "description": row["description"],
             }
         )
 
@@ -222,7 +205,7 @@ def update_alarm_correction_with_value(
     alarm_type: str,
     correction_status: str,
     correction_value: float,
-    correction_detail: str,
+    correction_detail: str,  # 현재 컬럼에서는 correction_detail을 저장하지 않지만, 시그니처 유지
 ):
     """자동/수동 보정 후 보정내역/보정값 업데이트"""
     try:
@@ -231,10 +214,10 @@ def update_alarm_correction_with_value(
         cursor.execute(
             """
             UPDATE alarms
-            SET correction_status = ?, correction_value = ?, correction_detail = ?
+            SET correction_status = ?, correction_value = ?
             WHERE time_str = ? AND alarm_type = ?
             """,
-            (correction_status, correction_value, correction_detail, time_str, alarm_type),
+            (correction_status, correction_value, time_str, alarm_type),
         )
         conn.commit()
         conn.close()

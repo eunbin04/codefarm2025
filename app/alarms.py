@@ -2,7 +2,6 @@
 import streamlit as st
 import pandas as pd
 import time
-import sqlite3
 import warnings
 
 from app_details.alarms_db import (
@@ -10,7 +9,6 @@ from app_details.alarms_db import (
     load_alarm_data_from_db,
     update_alarm_correction_with_value,
     color_status,
-    ALARMS_DB_PATH,
     get_korea_time,
 )
 
@@ -25,7 +23,7 @@ def show_alarms():
 
     st.title("🚨 알림 기록")
     st.markdown("---")
-    
+
     # 2. 새로고침/자동갱신 상태 관리
     if "alarms_last_update" not in st.session_state:
         st.session_state.alarms_last_update = 0
@@ -47,9 +45,7 @@ def show_alarms():
     if st.session_state.alarms_last_update > 0:
         korea_time = get_korea_time()
         last_update_str = korea_time.strftime("%Y-%m-%d %H:%M:%S")
-        st.caption(
-            f"마지막 갱신: {last_update_str} (자동: 60초 간격)"
-        )
+        st.caption(f"마지막 갱신: {last_update_str} (자동: 60초 간격)")
     else:
         st.caption("초기 로딩 중...")
 
@@ -69,12 +65,22 @@ def show_alarms():
         st.info("📭 아직 등록된 알림이 없습니다.")
         st.caption("배치에서 이상치가 탐지되면 여기에 기록됩니다.")
 
-    # 5. 보정 상태 필터
-    correction_filter = st.selectbox(
-        "보정 상태 선택",
-        ["전체", "미보정", "자동 보정", "수동 보정"],
-    )
+    # 5. 필터 영역 (보정 상태 + 상태)
+    col_f1, col_f2 = st.columns(2)
 
+    with col_f1:
+        correction_filter = st.selectbox(
+            "보정 상태 선택",
+            ["전체", "미보정", "자동 보정", "수동 보정"],
+        )
+
+    with col_f2:
+        status_filter = st.selectbox(
+            "알림 상태 선택",
+            ["전체", "이상치", "결측치"],
+        )
+
+    # 5-1. 보정 상태 필터 적용
     if not df_alarms.empty:
         if correction_filter == "자동 보정":
             filtered_df = df_alarms[
@@ -92,6 +98,10 @@ def show_alarms():
         filtered_df = pd.DataFrame(
             columns=df_alarms.columns if not df_alarms.empty else []
         )
+
+    # 5-2. 상태(이상치/결측치) 필터 추가 적용
+    if not filtered_df.empty and status_filter != "전체":
+        filtered_df = filtered_df[filtered_df["상태"] == status_filter]
 
     # 6. 시간 정렬 (수집일 기준)
     if not filtered_df.empty and "수집일" in filtered_df.columns:
@@ -122,11 +132,8 @@ def show_alarms():
     st.subheader("🔍 알림 상세")
 
     if not filtered_df.empty:
-        # 수집일 + 알림 유형 조합으로 선택하면 더 명확
         filtered_df = filtered_df.copy()
-        filtered_df["키"] = (
-            filtered_df["수집일"] + " | " + filtered_df["알림 유형"]
-        )
+        filtered_df["키"] = filtered_df["수집일"] + " | " + filtered_df["알림 유형"]
         keys = filtered_df["키"].tolist()
 
         selected_key = st.selectbox(
@@ -148,32 +155,25 @@ def show_alarms():
 
             st.markdown(
                 f"""
-                <div style="border: 2px solid {border_color}; border-radius: 10px; padding: 20px; background-color: #f9f9f9; margin-bottom: 20px;">
+                <div style="border: 2px solid {border_color}; border-radius: 10px; padding: 20px; background-color: {"#f8f8f8"}; margin-bottom: 20px;">
                     <h3 style="margin-top: 0;">{selected_row['알림 유형']} 알림</h3>
                     <p><b> - 수집일:</b> {selected_row['수집일']}</p>
                     <p><b> - 실제 값:</b> {selected_row['실제 값']}</p>
                     <p><b> - 상태:</b> {selected_row['상태']}</p>
                     <p><b> - 보정내역:</b> {selected_row['보정내역'] or '미보정'}</p>
                     <p><b> - 보정값:</b> {보정값}</p>
-                    <p><b> - 보정 상세:</b><br>
-                        <span style="font-size: 13px; color: #555;">
-                            {selected_row.get('보정상세', '보정 상세 정보 없음')}
-                        </span>
-                    </p>
-                    <p><b> - 설명:</b> {selected_row.get('설명', '설명 없음')}</p>
-                    <p><b> - DB 기록 시각(KST):</b> {selected_row.get('생성시각(KST)', '정보 없음')}</p>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-            # 수동 보정 버튼 (DB에는 상태/값/상세만 반영, 값은 사용자가 직접 입력하도록 할 수도 있음)
+            # 수동 보정 버튼
             if not is_corrected:
                 if st.button("✋ 수동 보정", key=f"manual_{selected_key}"):
                     now_kst_str = get_korea_time().strftime("%Y-%m-%d %H:%M:%S (KST)")
                     cs = f"수동 보정 ({now_kst_str})"
                     cd = "사용자가 대시보드에서 수동 보정으로 처리했습니다."
-                    cv = selected_row["실제 값"]  # 필요하면 다른 값으로 교체 가능
+                    cv = selected_row["실제 값"]
 
                     updated = update_alarm_correction_with_value(
                         selected_row["수집일"],
@@ -185,41 +185,14 @@ def show_alarms():
 
                     if updated:
                         st.success("수동 보정 상태로 변경되었습니다.")
-                        # 메모리 데이터도 갱신
                         idx = df_alarms[
                             (df_alarms["수집일"] == selected_row["수집일"])
                             & (df_alarms["알림 유형"] == selected_row["알림 유형"])
                         ].index[0]
                         df_alarms.at[idx, "보정내역"] = cs
-                        df_alarms.at[idx, "보정상세"] = cd
                         df_alarms.at[idx, "보정값"] = cv
                         st.session_state.alarm_data = df_alarms
                     else:
                         st.error("수동 보정 상태 저장에 실패했습니다.")
     else:
         st.info("상세를 볼 알림이 없습니다.")
-
-    # 9. 보정된 센서 데이터 미리보기
-    with st.expander("📊 보정된 센서 데이터 미리보기"):
-        try:
-            conn = sqlite3.connect(ALARMS_DB_PATH)
-            q = """
-                SELECT
-                    time_str,
-                    humidity,
-                    temperature,
-                    irradiance,
-                    source,
-                    datetime(created_at, 'localtime') AS created_at
-                FROM corrected_sensor
-                ORDER BY created_at DESC
-                LIMIT 10
-            """
-            prev_df = pd.read_sql(q, conn)
-            conn.close()
-            if not prev_df.empty:
-                st.dataframe(prev_df, width="stretch")
-            else:
-                st.caption("아직 보정된 센서 데이터가 없습니다.")
-        except Exception as e:
-            st.error(f"보정 데이터 로드 중 오류: {e}")

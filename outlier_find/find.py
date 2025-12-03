@@ -4,6 +4,7 @@ import numpy as np
 from scipy.stats import zscore
 import os, json
 
+
 SETTINGS_FILE = "config/settings.json"
 
 
@@ -32,12 +33,18 @@ def find_outliers_and_mark(df: pd.DataFrame, datetime_col: str = "time_str"):
     else:
         dataset.index = pd.RangeIndex(len(dataset))
 
+    # 숫자 변환 (Inf도 float로 남게 됨)
     for col in [temp_col, humi_col, light_col]:
         dataset[col] = pd.to_numeric(dataset[col], errors="coerce")
 
     temp = dataset[temp_col]
     hum = dataset[humi_col]
     light = dataset[light_col]
+
+    # 0) 원래부터 NaN / Inf 여부 마스크
+    temp_nan_or_inf = temp.isna() | np.isinf(temp)
+    hum_nan_or_inf = hum.isna() | np.isinf(hum)
+    light_nan_or_inf = light.isna() | np.isinf(light)
 
     # 1. 온도/습도 이상치
     TEMP_MIN, TEMP_MAX = -10, 40
@@ -65,10 +72,13 @@ def find_outliers_and_mark(df: pd.DataFrame, datetime_col: str = "time_str"):
     hum_fault = (hum_physical | cond_hum_diff_adj).fillna(False)
 
     # 2. 광 이상치
-    LIGHT_MIN, LIGHT_MAX = 0, 1.2
-    LIGHT_UPPER_SUS = 0.95
+    LIGHT_MIN, LIGHT_MAX = 0, 1000
+    LIGHT_UPPER_SUS = 10
 
-    light_physical = (light < LIGHT_MIN) | (light > LIGHT_MAX)
+    # 2-1. 물리 범위: 유한 값만
+    light_physical = light.notna() & ~np.isinf(light) & (
+        (light < LIGHT_MIN) | (light > LIGHT_MAX)
+    )
 
     if isinstance(dataset.index, pd.DatetimeIndex):
         hourly_mean = light.groupby(dataset.index.hour).mean()
@@ -76,60 +86,103 @@ def find_outliers_and_mark(df: pd.DataFrame, datetime_col: str = "time_str"):
         light_hourly_mean = pd.Series(hour, index=dataset.index).map(hourly_mean)
         MEAN_EPS = 0.05
         valid_hour = light_hourly_mean > MEAN_EPS
+
+        finite_light = light.notna() & ~np.isinf(light)
+
         upper_ratio, lower_ratio = 1.7, 0.3
-        light_too_high_rel = valid_hour & (light > light_hourly_mean * upper_ratio)
-        light_too_low_rel = valid_hour & (light < light_hourly_mean * lower_ratio)
+        light_too_high_rel = (
+            valid_hour & finite_light & (light > light_hourly_mean * upper_ratio)
+        )
+        light_too_low_rel = (
+            valid_hour & finite_light & (light < light_hourly_mean * lower_ratio)
+        )
     else:
         light_too_high_rel = pd.Series(False, index=dataset.index)
         light_too_low_rel = pd.Series(False, index=dataset.index)
 
-    light_upper_sus = light > LIGHT_UPPER_SUS
+    # 2-2. 상한 의심: 유한 값만
+    light_upper_sus = (~np.isinf(light)) & (light > LIGHT_UPPER_SUS)
 
     light_outlier = (
         light_physical | light_too_high_rel | light_too_low_rel | light_upper_sus
     ).fillna(False)
 
-    # 3. NaN 마킹
+
+    # 3. NaN 마킹 (이상치로 판정된 위치를 NaN으로)
     cleaned = dataset.copy()
     cleaned.loc[temp_fault.values, temp_col] = np.nan
     cleaned.loc[hum_fault.values, humi_col] = np.nan
     cleaned.loc[light_outlier.values, light_col] = np.nan
 
-    # 4. 센서별 알림 정보 생성
+    # 4. 센서별 알림 정보 생성 (이상치 + 결측치)
     records = []
     for ts in dataset.index:
         ts_str = (
             ts.strftime("%Y-%m-%d %H:%M") if isinstance(ts, pd.Timestamp) else str(ts)
         )
 
+        temp_val = temp.loc[ts]
+        hum_val = hum.loc[ts]
+        light_val = light.loc[ts]
+
+        # 온도
         if temp_fault.loc[ts]:
             records.append(
                 {
                     "time_str": ts_str,
                     "alarm_type": "온도",
-                    "value": float(temp.loc[ts]) if pd.notna(temp.loc[ts]) else None,
+                    "value": float(temp_val) if pd.notna(temp_val) else None,
                     "status": "이상치",
-                    "description": "온도 센서 이상 또는 급격한 변화",
                 }
             )
+        elif temp_nan_or_inf.loc[ts]:
+            records.append(
+                {
+                    "time_str": ts_str,
+                    "alarm_type": "온도",
+                    "value": None,
+                    "status": "결측치",
+                }
+            )
+
+        # 습도
         if hum_fault.loc[ts]:
             records.append(
                 {
                     "time_str": ts_str,
                     "alarm_type": "습도",
-                    "value": float(hum.loc[ts]) if pd.notna(hum.loc[ts]) else None,
+                    "value": float(hum_val) if pd.notna(hum_val) else None,
                     "status": "이상치",
-                    "description": "습도 센서 이상 또는 급격한 변화",
                 }
             )
+        elif hum_nan_or_inf.loc[ts]:
+            records.append(
+                {
+                    "time_str": ts_str,
+                    "alarm_type": "습도",
+                    "value": None,
+                    "status": "결측치",
+                }
+            )
+
+        # 광
         if light_outlier.loc[ts]:
             records.append(
                 {
                     "time_str": ts_str,
                     "alarm_type": "광",
-                    "value": float(light.loc[ts]) if pd.notna(light.loc[ts]) else None,
+                    "value": float(light_val) if pd.notna(light_val) else None,
                     "status": "이상치",
-                    "description": "광 센서 이상(0~1 범위/시간대 패턴/0.95 이상)",
+                }
+            )
+        elif light_nan_or_inf.loc[ts]:
+            # NaN 또는 Inf 는 항상 결측치로
+            records.append(
+                {
+                    "time_str": ts_str,
+                    "alarm_type": "광",
+                    "value": None,
+                    "status": "결측치",
                 }
             )
 
