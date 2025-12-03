@@ -9,11 +9,12 @@ SETTINGS_FILE = "config/settings.json"
 def save_settings_to_file():
     settings_data = {
         "farm_name": st.session_state.get('farm_name', "CODEFARM 온실"),
+        "crop": st.session_state.get('crop', "토마토"),
         "alert_enabled": st.session_state.get('alert_enabled', True),
-        "daily_stat_time": st.session_state.get('daily_stat_time', "09:00"),
-        "auto_train_time": st.session_state.get('auto_train_time', "02:00"),
-        "t_location": st.session_state.get('t_location', 1),
-        "h_location": st.session_state.get('h_location', 3),
+        "daily_stat_time": st.session_state.get('daily_stat_time', "21:00"),
+        "auto_train_time": st.session_state.get('auto_train_time', "00:00"),
+        "t_location": st.session_state.get('t_location', 3),
+        "h_location": st.session_state.get('h_location', 2),
         "r_location": st.session_state.get('r_location', 4),
     }
     os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
@@ -29,16 +30,18 @@ def load_settings_from_file():
     else:
         if 'farm_name' not in st.session_state:
             st.session_state['farm_name'] = "CODEFARM 온실"
+        if 'crop' not in st.session_state:
+            st.session_state['crop'] = "토마토"
         if 'alert_enabled' not in st.session_state:
             st.session_state['alert_enabled'] = True
         if 'daily_stat_time' not in st.session_state:
-            st.session_state['daily_stat_time'] = "09:00"
+            st.session_state['daily_stat_time'] = "21:00"
         if 'auto_train_time' not in st.session_state:
-            st.session_state['auto_train_time'] = "02:00"
+            st.session_state['auto_train_time'] = "00:00"
         if 't_location' not in st.session_state:
-            st.session_state['t_location'] = 1
+            st.session_state['t_location'] = 3
         if 'h_location' not in st.session_state:
-            st.session_state['h_location'] = 3
+            st.session_state['h_location'] = 2
         if 'r_location' not in st.session_state:
             st.session_state['r_location'] = 4
 
@@ -55,6 +58,12 @@ def show_settings():
     with st.form("settings_form"):
         st.markdown("##### 기본 설정")
         farm_name = st.text_input("농장명", value=st.session_state['farm_name'])
+
+        crop_options = ["🍅 토마토", "🫑 파프리카", "🥒 오이", "🍓 딸기"]
+        default_crop = st.session_state.get('crop', "토마토")
+        crop = st.selectbox("재배 작물", options=crop_options,
+            index=crop_options.index(default_crop) if default_crop in crop_options else 0,
+            help="현재 재배하고 있는 작물을 선택하세요.")
 
         alert_options = {True: "🔔 활성화", False: "🔕 비활성화"}
         alert_enabled = st.selectbox(
@@ -110,6 +119,7 @@ def show_settings():
 
         if submitted:
             st.session_state['farm_name'] = farm_name
+            st.session_state['crop'] = crop
             st.session_state['alert_enabled'] = alert_enabled
             st.session_state['daily_stat_time'] = daily_stat_time
             st.session_state['auto_train_time'] = auto_train_time
