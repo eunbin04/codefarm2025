@@ -11,3 +11,4 @@ seaborn
 xlsxwriter
 plotly
 matplotlib
+koreanize-matplotlib
