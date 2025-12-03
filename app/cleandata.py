@@ -8,7 +8,7 @@ from app_details.cleandata_fixfile import (
 )
 
 def show_cleandata():
-    st.title("🗂️ 데이터 관리")
+    st.title("🛠️ 데이터 보정")
 
     st.markdown("---")
     st.subheader("📤 데이터 업로드")

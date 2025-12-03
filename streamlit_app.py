@@ -38,7 +38,7 @@ st.sidebar.markdown(button_style, unsafe_allow_html=True)
 if st.sidebar.button('🏠 홈'):
     set_page('홈')
 
-with st.sidebar.expander("🗂️ 대시보드", expanded=True):
+with st.sidebar.expander("🗂️ 데이터 관리", expanded=True):
     if st.button('데이터 보정'):
         set_page('데이터 보정')
     if st.button('기간별 데이터'):

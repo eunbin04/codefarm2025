@@ -3,146 +3,171 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
-
-
-def load_mcdata():
-    df = pd.read_csv('data/mc.csv', encoding='utf-8')
-
-    df.rename(columns={df.columns[0]: 'Timestamp'}, inplace=True)
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
-    df.set_index('Timestamp', inplace=True)
-    
-    for col in df.columns:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-    df.replace(-32767, pd.NA, inplace=True)
-
-    df = df.round(3)
-
-    return df
+from app_details.cleandata_fixfile import (
+    upload_preclean,
+    get_table_list,
+    export_table_to_df, 
+)
 
 
 def show_perdata():
 
-    st.title('📅 기간별 데이터')
-    st.caption("기간을 선택하고, 센서별로 데이터를 탐색해보세요.")
+    st.title('📅 기간별 센서 데이터 분석')
+    st.caption("농가 센서 데이터를 원하는 기간 동안 조회·통계·그래프로 확인할 수 있습니다.")
 
     st.markdown("---")
+    st.subheader("📤 데이터 업로드")
 
-    data = load_mcdata()  # 전체 데이터 불러오기
 
-    # 데이터가 있는 고유 날짜 리스트 생성
-    available_dates = sorted(list(set(data.index.date)))
+    uploaded_file = st.file_uploader("CSV 또는 Excel 파일 업로드", type=['csv', 'xlsx'])
+    file_path, enc_used, df_preview = upload_preclean(uploaded_file)
     
-    # 최소, 최대 날짜 설정
-    min_date = available_dates[0]
-    max_date = available_dates[-1]
+    if df_preview is not None:
+        st.success(f"업로드 완료! DB에 저장되었습니다. (인코딩: {enc_used})")
+        st.dataframe(df_preview.head(), use_container_width=True)
 
-    # 사용자가 선택할 기본값: 전체 범위
-    default_start = min_date
-    default_end = max_date
 
-    # 날짜 입력 받기 (달력 형태)
+    tables = get_table_list()
+    if not tables:
+        st.warning("DB에 저장된 파일이 없습니다. 먼저 파일을 업로드하세요.")
+        return
+
+    selected_table = st.selectbox("조회할 데이터 파일 선택", tables)
+
+    # ------------------------------
+    # DB에서 DataFrame 불러오기 (tuple 반환이므로 첫 원소만 사용)
+    # ------------------------------
+    try:
+        df, df_tail = export_table_to_df(selected_table)
+    except Exception as e:
+        st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {e}")
+        return
+
+    # ------------------------------
+    # 무조건 첫 번째 컬럼을 Timestamp로 지정
+    # ------------------------------
+    try:
+        timestamp_col = df.columns[0]
+        df[timestamp_col] = pd.to_datetime(df[timestamp_col], errors='coerce')
+        df = df.set_index(timestamp_col)
+        df.index.name = "Timestamp"
+    except:
+        st.error("첫 번째 컬럼을 Timestamp로 변환할 수 없습니다.\nCSV/Excel 파일의 첫 컬럼이 시간이어야 합니다.")
+        st.dataframe(df.head(), use_container_width=True)
+        return
+
+    data = df
+
+    if data.index.isna().all():
+        st.error("Timestamp 변환에 실패했습니다. 파일의 첫 번째 컬럼이 날짜/시간이어야 합니다.")
+        st.dataframe(df.head(), use_container_width=True)
+        return
+
+    # ------------------------------
+    # 날짜 선택 범위 생성
+    # ------------------------------
+    valid_dates = sorted(list(set(df.index.date)))  # data 대신 df 사용
+    if len(valid_dates) == 0:
+        st.warning("Timestamp가 올바르지 않아 분석을 진행할 수 없습니다.")
+        return
+
+    min_date = valid_dates[0]
+    max_date = valid_dates[-1]
+
     date_range = st.date_input(
         "조회할 기간 선택",
-        value=(default_start, default_end),
+        value=(min_date, max_date),
         min_value=min_date,
         max_value=max_date
     )
 
-    if isinstance(date_range, (tuple, list)) and len(date_range) == 2:
+    if isinstance(date_range, (tuple, list)):
         start_date, end_date = date_range
     else:
         start_date = end_date = date_range
 
-    # 날짜 범위에 맞게 데이터 필터링 (시간 포함 인덱스이므로 날짜 조건으로 필터)
+    # ------------------------------
+    # 기간 필터링
+    # ------------------------------
     filtered = data.loc[
         (data.index.date >= start_date) & (data.index.date <= end_date)
     ]
-
     filtered = filtered.dropna(axis=1, how='all')
 
-    st.markdown("")
-
-    # ----------------- 탭 구성 -----------------
+    # ------------------------------
+    # 탭 구성
+    # ------------------------------
     tab_data, tab_stats, tab_detail = st.tabs(["📄 데이터", "📊 통계", "📈 상세 그래프"])
-
-    # 공통: 선택 가능한 변수 리스트
     all_columns = filtered.columns.tolist()
 
-    # 세션 상태로 '상세 보기용 변수' 유지
-    if "detail_var" not in st.session_state:
-        st.session_state["detail_var"] = None
-
-    # ================== 1) 데이터 탭 ==================
+    # ------------------------------------
+    # 1) 데이터 탭
+    # ------------------------------------
     with tab_data:
-        st.subheader("📄 데이터 다운로드")
+        st.subheader("📄 기간별 데이터")
 
         if all_columns:
             selected_vars = st.multiselect(
-                '측정 변수 선택',
+                '표시할 센서 변수 선택',
                 options=all_columns,
-                default=all_columns[: min(6, len(all_columns))]
+                default=all_columns[:6],
             )
 
-            # 비어있는 열 제거 후 남은 컬럼 리스트에 맞게 selected_vars 필터링
-            selected_vars = [var for var in selected_vars if var in filtered.columns]
+            selected_vars = [v for v in selected_vars if v in filtered.columns]
 
             if selected_vars:
-                # 기간 내의 선택된 변수 전체 원본 데이터 CSV로 변환
+                st.dataframe(filtered[selected_vars], use_container_width=True)
                 csv = filtered[selected_vars].to_csv().encode('utf-8')
-                # 데이터 미리보기
-                st.dataframe(
-                    filtered[selected_vars],
-                    width='stretch',
-                )
-                
+
                 st.download_button(
                     label=":material/download: CSV 다운로드",
                     data=csv,
-                    file_name='sensor_data.csv',
+                    file_name=f"{selected_table}_filtered.csv",
                     mime='text/csv'
                 )
-
-
             else:
-                st.warning("최소 1개의 변수를 선택해주세요.")
+                st.info("변수를 1개 이상 선택해주세요.")
         else:
-            st.warning("표시할 변수가 없습니다. 기간을 다시 선택해보세요.")
+            st.warning("해당 기간에는 유효한 데이터가 없습니다.")
 
-    # ================== 2) 통계 탭 ==================
+    # ------------------------------------
+    # 2) 통계 탭
+    # ------------------------------------
     with tab_stats:
-        st.subheader("📊 데이터 통계 요약")
+        st.subheader("📊 통계 요약")
 
         if all_columns:
             stats_vars = st.multiselect(
-                "변수 선택",
+                "통계 계산할 센서 선택",
                 options=all_columns,
-                default=all_columns[: min(6, len(all_columns))]
+                default=all_columns[:6]
             )
+
             stats_vars = [v for v in stats_vars if v in filtered.columns]
 
             if stats_vars:
                 desc = filtered[stats_vars].describe().T
-                desc = desc[['mean', 'min', 'max', 'std', '25%', '50%', '75%']]
                 desc.rename(
                     columns={
                         'mean': '평균',
                         'min': '최소',
                         'max': '최대',
                         'std': '표준편차',
-                        '25%': '25분위',
+                        '25%': '1Q',
                         '50%': '중앙값',
-                        '75%': '75분위',
+                        '75%': '3Q'
                     },
-                    inplace=True,
+                    inplace=True
                 )
-                st.dataframe(desc, width='stretch')
+                st.dataframe(desc, use_container_width=True)
             else:
-                st.info("통계를 볼 변수를 선택해주세요.")
+                st.info("통계 계산할 변수를 선택하세요.")
         else:
-            st.warning("표시할 변수가 없습니다. 기간을 다시 선택해보세요.")
+            st.warning("데이터가 없습니다.")
 
-    # ================== 3) 상세 그래프 탭 ==================
+    # ------------------------------------
+    # 3) 상세 그래프 탭
+    # ------------------------------------
     with tab_detail:
         st.subheader("📈 변수별 상세 그래프")
 
@@ -152,54 +177,55 @@ def show_perdata():
                 if cols_btn[i % 4].button(col_name):
                     st.session_state["detail_var"] = col_name
 
-            detail_var = st.session_state.get("detail_var", None)
-            if detail_var and detail_var in filtered.columns:
-                st.markdown(f"#### 🎯 선택된 변수: `{detail_var}`")
+            detail_var = st.session_state.get("detail_var")
 
+            if detail_var and detail_var in filtered.columns:
+                st.markdown(f"### • 선택된 변수: `{detail_var}`")
                 series = filtered[detail_var].dropna()
+
                 if not series.empty:
-                    # IQR 계산
                     Q1 = series.quantile(0.25)
                     Q3 = series.quantile(0.75)
                     IQR = Q3 - Q1
-                    lower_bound_iqr = Q1 - 1.5 * IQR
-                    upper_bound_iqr = Q3 + 1.5 * IQR
+                    lower = Q1 - 1.5 * IQR
+                    upper = Q3 + 1.5 * IQR
 
-                    # Plotly 그래프 생성
                     fig = go.Figure()
 
-                    # 시계열 라인 차트 추가
                     fig.add_trace(go.Scatter(
                         x=series.index,
                         y=series.values,
                         mode='lines',
                         name='값',
-                        line=dict(color="#E53D3D")
+                        line=dict(color="#1E88E5")
                     ))
 
-                    # IQR 범위 영역 채우기
                     fig.add_trace(go.Scatter(
                         x=np.concatenate([series.index, series.index[::-1]]),
-                        y=np.concatenate([[lower_bound_iqr]*len(series), [upper_bound_iqr]*len(series[::-1])]),
+                        y=np.concatenate([[lower]*len(series),
+                                          [upper]*len(series[::-1])]),
                         fill='toself',
-                        fillcolor='rgba(197, 226, 181, 0.3)',
+                        fillcolor='rgba(100,200,100,0.2)',
                         line=dict(color='rgba(255,255,255,0)'),
                         hoverinfo="skip",
-                        showlegend=True,
                         name='IQR 범위',
                     ))
 
                     fig.update_layout(
                         xaxis_title='시간',
                         yaxis_title=detail_var,
-                        hovermode='x unified'
+                        hovermode='x unified',
+                        height=500
                     )
 
-                    st.plotly_chart(fig, width='stretch')
+                    st.plotly_chart(fig, use_container_width=True)
 
                 else:
-                    st.info("선택한 변수에 데이터가 없습니다.")
+                    st.info("해당 변수에 데이터가 없습니다.")
+
             else:
-                st.info("상세히 보고 싶은 변수를 위에서 선택해주세요.")
+                st.info("아래 버튼에서 상세히 볼 변수를 선택하세요.")
+
         else:
-            st.warning("표시할 변수가 없습니다. 기간을 다시 선택해보세요.")
+            st.warning("데이터가 없습니다.")
+

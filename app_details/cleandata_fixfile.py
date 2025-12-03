@@ -1,21 +1,21 @@
 # cleandata_fixfile.py
 import pandas as pd
+import io
 import os
 import sqlite3
 from precleaning.incoding import read_csv_robust, clean_for_analysis
 
 def upload_preclean(uploaded_file):
     if uploaded_file is not None:
-        path = f"{uploaded_file.name}"
-        with open(path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
 
         if uploaded_file.type == 'text/csv':
-            df_raw, enc = read_csv_robust(path)
+            content = uploaded_file.getbuffer()
+            df_raw, enc = read_csv_robust(io.BytesIO(content))
             df_clean = clean_for_analysis(df_raw)
             enc_used = enc
         else:
-            df_clean = pd.read_excel(path)
+            content = uploaded_file.getbuffer()
+            df_clean = pd.read_excel(io.BytesIO(content))
             df_clean = clean_for_analysis(df_clean)
             enc_used = 'excel'
 
@@ -24,9 +24,10 @@ def upload_preclean(uploaded_file):
         df_clean.to_sql(table_name, conn, if_exists='replace', index=False)
         conn.close()
 
-        return path, enc_used, df_clean.tail()
+        return None, enc_used, df_clean.tail() 
     else:
         return None, None, None
+
 
 def get_table_list(db_path='codefarmdb.sqlite'):
     conn = sqlite3.connect(db_path)
