@@ -1,0 +1,6 @@
+[theme]
+base = "light"
+primaryColor = "#15803D"              # 기존보다 조금 밝은 포레스트 그린
+backgroundColor = "#fefefeff"           # 완전 흰색 대신 아주 연한 블루그레이
+secondaryBackgroundColor = "#ecececff"  # 은은한 연녹색(카드/사이드바 배경)
+textColor = "#111827"                 # 짙은 차콜 그대로 유지

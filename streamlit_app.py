@@ -12,7 +12,7 @@ from app.settings import show_settings
 
 st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
-st.sidebar.title('메뉴')
+st.sidebar.title('Menu')
 
 # 세션 상태 초기화
 if 'page' not in st.session_state:
@@ -26,7 +26,7 @@ button_style = """
     <style>
     div.stButton > button {
         width: 100%;
-        height: 3em;
+        height: 2.7em;
         font-size: 1rem;
         text-align: left;
     }
