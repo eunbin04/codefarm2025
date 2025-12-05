@@ -12,7 +12,7 @@ from app_details.cleandata_fixfile import (
 
 def show_perdata():
 
-    st.title('📅 기간별 센서 데이터 분석')
+    st.title('📅 기간별 데이터')
     st.caption("농가 센서 데이터를 원하는 기간 동안 조회·통계·그래프로 확인할 수 있습니다.")
 
     st.markdown("---")
@@ -104,7 +104,7 @@ def show_perdata():
     # 1) 데이터 탭
     # ------------------------------------
     with tab_data:
-        st.subheader("📄 기간별 데이터")
+        st.subheader("📄 데이터 다운로드")
 
         if all_columns:
             selected_vars = st.multiselect(
