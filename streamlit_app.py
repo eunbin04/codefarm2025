@@ -8,13 +8,51 @@ from app.perdata import show_perdata
 from app.nowdata import show_nowdata
 from app.alarms import show_alarms
 from app.settings import show_settings
+from auth import authenticate, load_users
+import time
+
+# 로그인 세션 관리
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+users_df = load_users()
+
+def login_page():
+    st.title("CODEFARM 로그인")
+    username = st.text_input("아이디")
+    password = st.text_input("비밀번호", type="password")
+
+    if st.button("로그인"):
+        user = authenticate(username, password, users_df)
+        if user:
+            st.session_state.logged_in = True
+            st.session_state.user = user
+            st.success(f"환영합니다! {user['name']} 님 😊")
+            with st.spinner("로그인 중..."):
+                time.sleep(3)
+            st.rerun()
+        else:
+            st.error("아이디 또는 비밀번호가 잘못되었습니다")
+
+def logout():
+    st.session_state.logged_in = False
+    st.session_state.user = None
+    st.rerun()
 
 
 st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
 
+if st.session_state.logged_in:
+    st.sidebar.markdown(f"**👤 {st.session_state.user['name']}님**")
+    if st.sidebar.button("🔓 로그아웃"):
+        logout()
+
+st.sidebar.markdown("---")
 st.sidebar.title('Menu')
 
-# 세션 상태 초기화
 if 'page' not in st.session_state:
     st.session_state.page = '홈'  
 
@@ -34,6 +72,10 @@ button_style = """
     """
 st.sidebar.markdown(button_style, unsafe_allow_html=True)
 
+# 로그인 체크
+if not st.session_state.logged_in:
+    login_page()
+    st.stop()
 
 if st.sidebar.button('🏠 홈'):
     set_page('홈')
