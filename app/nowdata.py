@@ -1,9 +1,8 @@
-# nowdata.py
 import streamlit as st
 import sqlite3
 import pandas as pd
 import time
-
+import numpy as np
 
 def show_nowdata():
 
@@ -18,6 +17,18 @@ def show_nowdata():
         df = pd.read_sql(query, conn)
         conn.close()
         return df
+
+    # VPD 계산 함수 (온도, 습도 기반) - kPa 단위로 수정
+    @st.cache_data
+    def calculate_vpd(temperature, humidity):
+        """VPD (kPa) 계산: 포화증기압 - 실제증기압"""
+        # 포화증기압 (Tetens 공식, Tetens equation)
+        es = 0.6108 * np.exp((17.27 * temperature) / (temperature + 237.3))
+        # 실제증기압
+        ea = es * (humidity / 100.0)
+        # VPD (kPa 단위)
+        vpd = es - ea
+        return vpd
 
     # 화면을 계속 갱신하기 위한 빈 공간 만들기
     placeholder = st.empty()
@@ -34,11 +45,20 @@ def show_nowdata():
             latest = df.iloc[0]
 
             with placeholder.container():
-                # 1. 상단 지표 (Metric) 표시
-                kpi1, kpi2, kpi3 = st.columns(3)
+                # 1. 상단 지표 (Metric) 표시 - VPD kPa 단위로 수정
+                kpi1, kpi2, kpi3, kpi4 = st.columns(4)
                 kpi1.metric(label="🌡️ 온도", value=f"{latest['temperature']} °C")
                 kpi2.metric(label="💧 습도", value=f"{latest['humidity']} %")
-                kpi3.metric(label="☀️ 일사량", value=f"{latest['irradiance']} W/m²")
+                kpi3.metric(label="☀️ 일사량", value=f"{latest['irradiance']:.2f} W/m²")
+                
+                # 실시간 VPD 계산 및 표시 (kPa)
+                temp_num = pd.to_numeric(latest['temperature'], errors='coerce')
+                hum_num = pd.to_numeric(latest['humidity'], errors='coerce')
+                if not pd.isna(temp_num) and not pd.isna(hum_num):
+                    current_vpd = calculate_vpd(temp_num, hum_num)
+                    kpi4.metric(label="🌱 VPD", value=f"{current_vpd:.2f} kPa")
+                else:
+                    kpi4.metric(label="🌱 VPD", value="계산 불가")
 
                 st.markdown(
                     f"<div style='text-align:right; font-size:12px; color:#666;'>{latest['time_str']} 기준</div>",
@@ -52,22 +72,35 @@ def show_nowdata():
                 df_chart['temperature_num'] = pd.to_numeric(df_chart['temperature'], errors='coerce')
                 df_chart['humidity_num'] = pd.to_numeric(df_chart['humidity'], errors='coerce')
                 df_chart['irradiance_num'] = pd.to_numeric(df_chart['irradiance'], errors='coerce')
+                
+                # VPD 컬럼 추가 (kPa 단위로 동적 계산)
+                df_chart['vpd_num'] = df_chart.apply(
+                    lambda row: calculate_vpd(row['temperature_num'], row['humidity_num']) 
+                    if pd.notna(row['temperature_num']) and pd.notna(row['humidity_num']) 
+                    else np.nan, axis=1
+                )
 
                 st.subheader("실시간 변화 그래프")
 
-                # 3가지 데이터를 탭으로 나누어 보여주기
-                tab1, tab2, tab3 = st.tabs(["온도", "습도", "일사량"])
+                # 4가지 데이터를 탭으로 나누어 보여주기 (VPD 탭 추가)
+                tab1, tab2, tab3, tab4 = st.tabs(["온도", "습도", "일사량", "VPD"])
 
                 with tab1:
-                    st.line_chart(df_chart, x='time_str', y='temperature_num', color='#FF5733')
+                    st.line_chart(df_chart, x='time_str', y='temperature_num')
                 with tab2:
-                    st.line_chart(df_chart, x='time_str', y='humidity_num', color='#33C1FF')
+                    st.line_chart(df_chart, x='time_str', y='humidity_num')
                 with tab3:
-                    st.line_chart(df_chart, x='time_str', y='irradiance_num', color='#FFC300')
+                    st.line_chart(df_chart, x='time_str', y='irradiance_num')
+                with tab4:
+                    # VPD 그래프에 최적 구간 표시 (식물 재배 기준: 0.08~0.12 kPa)
+                    st.line_chart(df_chart, x='time_str', y='vpd_num')
+                    st.markdown("**💡 VPD 기준**: 녹색(0.08~0.12 kPa) = 식물 성장 최적 / 빨강(<0.08) = 너무 습함 / 파랑(>0.12) = 너무 건조")
 
-                # 3. 데이터 표 (원시 데이터) – 여기서는 "NaN" 문자열 그대로 보임
+                # 3. 데이터 표 (원시 데이터 + VPD 컬럼 추가) – kPa 단위
+                df_display = df.copy()
+                df_display['VPD(kPa)'] = df_chart['vpd_num'].round(2)
                 with st.expander("상세 데이터 보기", expanded=True):
-                    st.dataframe(df)
+                    st.dataframe(df_display)
 
         # 60초마다 갱신
         time.sleep(60)
