@@ -1,21 +1,103 @@
 # home.py
 import streamlit as st
+import sqlite3
+import pandas as pd
+import base64
+
+def get_img_base64(path):
+    with open(path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+img_base64 = get_img_base64("data/farm.jpg")
+
+
+def get_latest_sensor():
+    try:
+        conn = sqlite3.connect("sensor_data.db")
+        df = pd.read_sql("SELECT * FROM measurements ORDER BY id DESC LIMIT 1", conn)
+        conn.close()
+        if df.empty:
+            return None
+        return df.iloc[0]
+    except:
+        return None
+
 
 def show_home():
-    st.title('안녕하세요! 👋')
+
+    st.markdown(
+        f"""
+        <div style="
+            width:100%;
+            height:200px;
+            background-image: url('data:image/jpg;base64,{img_base64}');
+            background-size: cover;
+            background-position: center;
+            border-radius:10px;
+            opacity:0.5;
+            margin-bottom:20px;
+        ">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+    farm = st.session_state.get("farm_name", "CODEFARM 온실")
+
+    st.title(f"{farm}")
 
     st.markdown("---")
-    
-    st.markdown("""
-    ### 🌱 CODEFARM 소개
-    CODEFARM은 스마트 온실 관리 시스템으로, 온실의 환경 데이터를 실시간으로 모니터링하고 분석할 수 있는 플랫폼입니다.  
-    온실 내부의 온도, 습도, CO2 농도, 조도 등의 다양한 센서 데이터를 시각화하여 사용자에게 제공합니다.         
-    ### 🔍 주요 기능
-    - **데이터 시각화**: 온실 환경 데이터를 그래프로 시각화하여 쉽게 이해할 수 있습니다.  
-    - **데이터 필터링**: 원하는 시간 범위와 측정 변수를 선택하여 맞춤형 데이터를 확인할 수 있습니다.  
-    - **데이터 다운로드**: 정제된 데이터를 CSV 파일로 다운로드할 수 있습니다.  
-    - **알림 설정**: 특정 조건에 따라 경고 알림을 설정하여 실시간으로 상황을 파악할 수 있습니다.  
-    - **사용자 설정**: 개인 맞춤형 환경 설정이 가능합니다.  
-    ### 🚀 시작하기
-    왼쪽 사이드바에서 메뉴를 선택해 다른 페이지로 이동해보세요!
-    """)
+
+    # 1) 최신 데이터 표시(있으면)
+    latest = get_latest_sensor()
+
+    st.subheader("최신 농가 상태")
+
+    if latest is not None:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("🌡️ 온도", f"{latest['temperature']} ℃")
+        c2.metric("💧 습도", f"{latest['humidity']} %")
+        c3.metric("☀️ 광량", f"{latest['irradiance']} W/m²")
+        c4.metric("⏱️ 측정 시각", latest["time_str"])
+
+    else:
+        st.info("아직 센서 데이터가 없습니다.\n데이터 업로드 또는 연결을 진행하세요.")
+
+
+    st.markdown("---")
+    st.subheader("주요 기능")
+
+    st.markdown("##### 데이터 조회 및 분석")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("🌿 실시간 데이터"):
+            st.session_state['page'] = 'nowdata'
+
+    with col2:
+        if st.button("📅 기간별 분석"):
+            st.session_state['page'] = 'perdata'
+
+    with col3:
+        if st.button("🛠️ 데이터 보정"):
+            st.session_state['page'] = 'cleandata'
+
+
+    st.markdown("##### 관리 기능")
+    col4, col5, col6 = st.columns(3)
+
+    with col4:
+        if st.button("🚨 알림 기록"):
+            st.session_state['page'] = 'alarms'
+
+    with col5:
+        if st.button("⛅ 기상 정보"):
+            st.session_state['page'] = 'weather'
+
+    with col6:
+        if st.button("⚙️ 설정 페이지"):
+            st.session_state['page'] = 'settings'
+
+
+    st.markdown("---")
