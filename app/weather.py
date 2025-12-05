@@ -238,4 +238,4 @@ def show_weather():
     )
 
     st.markdown("---")
-    st.markdown("데이터 출처: 기상청 초단기실황 API")
+    st.markdown("[데이터 출처] 기상청 초단기실황 API")
