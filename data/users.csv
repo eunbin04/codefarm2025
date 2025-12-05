@@ -1,0 +1,3 @@
+username,name,password_hash,role,is_active
+admin,관리자,admin123,user,1
+test,홍길동,test123,user,1
