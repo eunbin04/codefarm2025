@@ -92,11 +92,9 @@ def show_nowdata():
                 with tab3:
                     st.line_chart(df_chart, x='time_str', y='irradiance_num')
                 with tab4:
-                    # VPD 그래프에 최적 구간 표시 (식물 재배 기준: 0.08~0.12 kPa)
                     st.line_chart(df_chart, x='time_str', y='vpd_num')
-                    st.markdown("**💡 VPD 기준**: 녹색(0.08~0.12 kPa) = 식물 성장 최적 / 빨강(<0.08) = 너무 습함 / 파랑(>0.12) = 너무 건조")
 
-                # 3. 데이터 표 (원시 데이터 + VPD 컬럼 추가) – kPa 단위
+                # 3. 데이터 표
                 df_display = df.copy()
                 df_display['VPD(kPa)'] = df_chart['vpd_num'].round(2)
                 with st.expander("상세 데이터 보기", expanded=True):
