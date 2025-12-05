@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 from datetime import timedelta
 from app_details.utils import get_korea_time
-
+from app_details.weather_loc import load_station_table, get_region_options, get_office_options, get_station_options, get_default_values, get_lat_lon
 
 def latlon_to_xy(lat, lon):
     RE = 6371.00877
@@ -40,9 +40,11 @@ def latlon_to_xy(lat, lon):
     ny = int(ro - ra * math.cos(theta) + YO + 0.5)
     return nx, ny
 
+
 def pty_to_desc(pty):
     mapping = {0: "강수 없음", 1: "비", 2: "비/눈", 3: "눈", 5: "빗방울", 6: "빗방울/눈날림", 7: "눈날림"}
     return mapping.get(pty, f"코드 {pty}")
+
 
 def deg_to_dir(deg):
     if pd.isna(deg):
@@ -58,15 +60,45 @@ def deg_to_dir(deg):
     return dirs[idx]
 
 
+
 def show_weather():
     st.title("⛅ 기상 정보")
     st.markdown("---")
 
-    # 입력값: 위경도
-    LAT = st.number_input('위도 (LAT)', value=36.1234, format="%.4f")
-    LON = st.number_input('경도 (LON)', value=127.5678, format="%.4f")
-    SERVICE_KEY = "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9"
+    # ===== 지점 선택 UI 추가 (기존 디자인 위에) =====
+    df_station = load_station_table()
+    defaults = get_default_values(df_station)
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        selected_region = st.selectbox(
+            "지역", 
+            options=get_region_options(df_station),
+            index=defaults["region_idx"],
+            key="weather_region"
+        )
+    with col2:
+        office_options = get_office_options(df_station, selected_region)
+        selected_office = st.selectbox(
+            "관리관서",
+            options=office_options,
+            index=0,
+            key="weather_office"
+        )
+    with col3:
+        station_options = get_station_options(df_station, selected_region, selected_office)
+        selected_station = st.selectbox(
+            "지점명",
+            options=station_options,
+            index=0,
+            key="weather_station"
+        )
+    
+    # 선택된 지점의 위경도 자동 세팅
+    LAT, LON = get_lat_lon(selected_station)
+    st.caption(f"📍위도: {LAT:.4f}, 경도: {LON:.4f}")
 
+    SERVICE_KEY = "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9"
 
     nx, ny = latlon_to_xy(LAT, LON)
     # st.write(f"좌표: ({nx}, {ny})")
@@ -132,7 +164,7 @@ def show_weather():
     wind_dir = deg_to_dir(vec)
     dt_str = latest["datetime"].strftime("%Y-%m-%d %H:%M")
 
-    # 요약 출력
+    # 요약 출력 (기존 디자인 100% 그대로)
     def summary(dt_str, t1h, reh, pty_desc, rn1, wsd, wind_dir, vec):
         st.subheader("실시간 요약")
         col1, col2, col3 = st.columns(3)
@@ -193,7 +225,7 @@ def show_weather():
 
     st.markdown("---")
 
-    st.subheader("날씨 데이터 다운로드")
+    st.subheader("데이터 다운로드")
     st.dataframe(df_pivot)
 
     # CSV 다운로드 버튼
