@@ -4,22 +4,11 @@ import io
 import pandas as pd
 from app_details.cleandata_train import manual_train, start_scheduler, stop_scheduler, get_train_log
 from app_details.cleandata_fixfile import (
-    upload_preclean, process_table_df, get_table_list, export_table_to_df
+    process_table_df, get_table_list, export_table_to_df
 )
 
 def show_cleandata():
     st.title("🛠️ 데이터 보정")
-
-    st.markdown("---")
-    st.subheader("📤 데이터 업로드")
-
-    uploaded_file = st.file_uploader("데이터 파일 업로드", type=['csv','xlsx'])
-    file_path, enc_used, df_preview = upload_preclean(uploaded_file)
-    
-    if df_preview is not None:
-        st.write("전처리된 데이터 미리보기(끝에서 5행)")
-        st.dataframe(df_preview)
-        st.success(f"데이터가 DB에 저장되었습니다! (인코딩: {enc_used})")
 
     st.markdown("---")
     st.subheader("✨ 클린 데이터 다운로드")
@@ -29,17 +18,31 @@ def show_cleandata():
     db_df = None
     if selected_table:
         db_df, db_preview = export_table_to_df(selected_table)
-        st.write("선택한 DB 데이터 미리보기(끝에서 5행)")
+        st.write("선택한 데이터 미리보기")
         st.dataframe(db_preview)
 
     target_df = db_df if db_df is not None else None
 
-    # 사용자에게 각 열 인덱스 선택받기 (streamlit selectbox 또는 number_input 활용)
+    col1, col2, col3 = st.columns(3)
     col_count = len(target_df.columns) if target_df is not None else 0
-    t_location = st.number_input("온도(Temperature) 열 인덱스", min_value=0, max_value=col_count-1, value=1)
-    h_location = st.number_input("습도(Humidity) 열 인덱스", min_value=0, max_value=col_count-1, value=3)
-    r_location = st.number_input("광(Solar_Radiation) 열 인덱스", min_value=0, max_value=col_count-1, value=4)
-    
+    with col1:
+        t_location = st.number_input(
+            "온도 인덱스",
+            min_value=0, max_value=col_count-1, value=1
+        )
+
+    with col2:
+        h_location = st.number_input(
+            "습도 인덱스",
+            min_value=0, max_value=col_count-1, value=3
+        )
+
+    with col3:
+        r_location = st.number_input(
+            "광 인덱스",
+            min_value=0, max_value=col_count-1, value=4
+        )
+
 
     if st.button("보정하기"):
         if target_df is None:

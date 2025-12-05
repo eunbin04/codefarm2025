@@ -41,7 +41,7 @@ def export_table_to_df(table_name, db_path='codefarmdb.sqlite'):
     conn = sqlite3.connect(db_path)
     df = pd.read_sql(f"SELECT * FROM [{table_name}];", conn)
     conn.close()
-    return df, df.tail()
+    return df, df.head()
 
 def process_table_df(df, temp_index, humi_index, light_index):
     from outlier_find.find_full import find_outlier_df

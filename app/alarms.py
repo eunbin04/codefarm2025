@@ -62,7 +62,7 @@ def show_alarms():
         c3.metric("자동 보정", auto_corr)
         c4.metric("수동 보정", manual_corr)
     else:
-        st.info("📭 아직 등록된 알림이 없습니다.")
+        st.info("아직 등록된 알림이 없습니다.")
         st.caption("배치에서 이상치가 탐지되면 여기에 기록됩니다.")
 
     # 5. 필터 영역 (보정 상태 + 상태)
@@ -192,6 +192,7 @@ def show_alarms():
                         df_alarms.at[idx, "보정내역"] = cs
                         df_alarms.at[idx, "보정값"] = cv
                         st.session_state.alarm_data = df_alarms
+                        st.rerun()
                     else:
                         st.error("수동 보정 상태 저장에 실패했습니다.")
     else:

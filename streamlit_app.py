@@ -1,6 +1,7 @@
 # streamlit_app.py
 import streamlit as st
 from app.home import show_home
+from app.setdb import show_setdb
 from app.cleandata import show_cleandata
 from app.vpd import show_vpd
 from app.weather import show_weather
@@ -43,7 +44,7 @@ def logout():
     st.rerun()
 
 
-st.set_page_config(page_title='CODEFARM', page_icon=':seedling:')
+st.set_page_config(page_title='CODEFARM', page_icon=':seedling:', layout='wide')
 
 if st.session_state.logged_in:
     st.sidebar.markdown(f"**👤 {st.session_state.user['name']}님**")
@@ -80,7 +81,9 @@ if not st.session_state.logged_in:
 if st.sidebar.button('🏠 홈'):
     set_page('홈')
 
-with st.sidebar.expander("🗂️ 데이터 관리", expanded=True):
+with st.sidebar.expander("🗃️ 데이터 관리", expanded=True):
+    if st.button('DB 관리'):
+        set_page('DB 관리')
     if st.button('데이터 보정'):
         set_page('데이터 보정')
     if st.button('기간별 데이터'):
@@ -95,7 +98,7 @@ with st.sidebar.expander("📈 모니터링", expanded=True):
     if st.button('실시간 데이터'):
         set_page('실시간 데이터')
 
-if st.sidebar.button('💦 VPD 계산기'):
+if st.sidebar.button('🧮 VPD 계산기'):
     set_page('VPD 계산기')
 
 if st.sidebar.button('⚙️ 설정'):
@@ -104,6 +107,8 @@ if st.sidebar.button('⚙️ 설정'):
 # 페이지별 화면 표시
 if st.session_state.page == '홈':
     show_home()
+elif st.session_state.page == 'DB 관리':
+    show_setdb()
 elif st.session_state.page == '데이터 보정':
     show_cleandata()
 elif st.session_state.page == '기간별 데이터':

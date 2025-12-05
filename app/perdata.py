@@ -16,23 +16,13 @@ def show_perdata():
     st.caption("농가 센서 데이터를 원하는 기간 동안 조회·통계·그래프로 확인할 수 있습니다.")
 
     st.markdown("---")
-    st.subheader("📤 데이터 업로드")
-
-
-    uploaded_file = st.file_uploader("CSV 또는 Excel 파일 업로드", type=['csv', 'xlsx'])
-    file_path, enc_used, df_preview = upload_preclean(uploaded_file)
-    
-    if df_preview is not None:
-        st.success(f"업로드 완료! DB에 저장되었습니다. (인코딩: {enc_used})")
-        st.dataframe(df_preview.head(), use_container_width=True)
-
 
     tables = get_table_list()
     if not tables:
         st.warning("DB에 저장된 파일이 없습니다. 먼저 파일을 업로드하세요.")
         return
 
-    selected_table = st.selectbox("조회할 데이터 파일 선택", tables)
+    selected_table = st.selectbox("데이터 파일 선택", tables)
 
     # ------------------------------
     # DB에서 DataFrame 불러오기 (tuple 반환이므로 첫 원소만 사용)
@@ -53,14 +43,14 @@ def show_perdata():
         df.index.name = "Timestamp"
     except:
         st.error("첫 번째 컬럼을 Timestamp로 변환할 수 없습니다.\nCSV/Excel 파일의 첫 컬럼이 시간이어야 합니다.")
-        st.dataframe(df.head(), use_container_width=True)
+        st.dataframe(df.head(), width='stretch')
         return
 
     data = df
 
     if data.index.isna().all():
         st.error("Timestamp 변환에 실패했습니다. 파일의 첫 번째 컬럼이 날짜/시간이어야 합니다.")
-        st.dataframe(df.head(), use_container_width=True)
+        st.dataframe(df.head(), width='stretch')
         return
 
     # ------------------------------
@@ -116,7 +106,7 @@ def show_perdata():
             selected_vars = [v for v in selected_vars if v in filtered.columns]
 
             if selected_vars:
-                st.dataframe(filtered[selected_vars], use_container_width=True)
+                st.dataframe(filtered[selected_vars], width='stretch')
                 csv = filtered[selected_vars].to_csv().encode('utf-8')
 
                 st.download_button(
@@ -159,7 +149,7 @@ def show_perdata():
                     },
                     inplace=True
                 )
-                st.dataframe(desc, use_container_width=True)
+                st.dataframe(desc, width='stretch')
             else:
                 st.info("통계 계산할 변수를 선택하세요.")
         else:
@@ -218,7 +208,7 @@ def show_perdata():
                         height=500
                     )
 
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
 
                 else:
                     st.info("해당 변수에 데이터가 없습니다.")
