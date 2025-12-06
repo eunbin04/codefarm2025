@@ -27,7 +27,7 @@ def show_setdb():
 
     if df_preview is not None:
         st.write("데이터 미리보기 (끝에서 5행)")
-        st.dataframe(df_preview, use_container_width=True)
+        st.dataframe(df_preview, width='stretch')
         st.success(f"데이터가 DB에 저장되었습니다. (인코딩: {enc_used})")
 
     # ----------------------------------
@@ -53,7 +53,7 @@ def show_setdb():
     if selected_table:
         db_df, db_preview = export_table_to_df(selected_table, DB_PATH)
         st.write(f"**{selected_table}** 테이블 미리보기")
-        st.dataframe(db_preview, use_container_width=True)
+        st.dataframe(db_preview, width='stretch')
 
     # ----------------------------------
     # 3. 테이블 이름 변경
