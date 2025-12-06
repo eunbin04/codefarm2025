@@ -56,9 +56,9 @@ def show_nowdata():
                 hum_num = pd.to_numeric(latest['humidity'], errors='coerce')
                 if not pd.isna(temp_num) and not pd.isna(hum_num):
                     current_vpd = calculate_vpd(temp_num, hum_num)
-                    kpi4.metric(label="🌱 VPD", value=f"{current_vpd:.2f} kPa")
+                    kpi4.metric(label="💦 VPD", value=f"{current_vpd:.2f} kPa")
                 else:
-                    kpi4.metric(label="🌱 VPD", value="계산 불가")
+                    kpi4.metric(label="💦 VPD", value="계산 불가")
 
                 st.markdown(
                     f"<div style='text-align:right; font-size:12px; color:#666;'>{latest['time_str']} 기준</div>",
