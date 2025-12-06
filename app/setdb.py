@@ -1,5 +1,6 @@
 # setdb.py
 import sqlite3
+import time
 import streamlit as st
 from app_details.cleandata_fixfile import (
     upload_preclean, get_table_list, export_table_to_df
@@ -44,7 +45,7 @@ def show_setdb():
     # 2) 미리보기: 파일이 있고, 아직 업로드 전일 때만 표시
     if st.session_state.preview_df is not None:
         st.write("데이터 미리보기 (업로드 전 확인용)")
-        st.dataframe(st.session_state.preview_df, use_container_width=True)
+        st.dataframe(st.session_state.preview_df, width='stretch')
         st.caption(f"인코딩: {st.session_state.preview_enc}")
 
         # 3) 업로드 확정 버튼
@@ -109,6 +110,7 @@ def show_setdb():
                     conn.commit()
                     conn.close()
                     st.success(f"'{selected_table}' → '{new_name}' 으로 이름이 변경되었습니다.")
+                    time.sleep(2)   
                     st.rerun()
                 except Exception as e:
                     st.error(f"이름 변경 중 오류가 발생했습니다: {e}")
@@ -130,6 +132,7 @@ def show_setdb():
                 conn.commit()
                 conn.close()
                 st.success(f"'{selected_table}' 테이블이 삭제되었습니다.")
+                time.sleep(2)
                 st.rerun()
             except Exception as e:
                 st.error(f"테이블 삭제 중 오류가 발생했습니다: {e}")
