@@ -24,15 +24,13 @@ def show_alarms():
     st.title("🚨 알림 기록")
     st.markdown("---")
 
-    # 2. 새로고침/자동갱신 상태 관리
+    # 2. 자동갱신 상태 관리
     if "alarms_last_update" not in st.session_state:
         st.session_state.alarms_last_update = 0
 
-    manual_refresh = st.button("🔄 새로고침")
-
     now_ts = time.time()
 
-    if manual_refresh or (now_ts - st.session_state.alarms_last_update > 60):
+    if (now_ts - st.session_state.alarms_last_update > 60):
         st.session_state.alarm_data = load_alarm_data_from_db()
         st.session_state.alarms_last_update = now_ts
 

@@ -9,89 +9,102 @@ try:
 except ImportError:
     chardet = None
 
+
 BASE_PATH = "data"
 OUTPUT_DIR = "data_cleaned"
-TRY_ENCODINGS = ['utf-8-sig', 'utf-8', 'cp949', 'euc-kr']
+
+ENCODING_ORDER = ['euc-kr', 'cp949', 'utf-8-sig', 'utf-8']
+SEPARATORS = [',', ';', '\t', '|', ' ']  
 
 
-def guess_encoding(path, n_bytes=200000):
+def detect_encoding_from_bytes(content: bytes):
     if chardet is None:
         return None
-    if isinstance(path, str):
-        with open(path, "rb") as f:
-            raw = f.read(n_bytes)
-        result = chardet.detect(raw)
-        return result.get("encoding")
-    else:
-        # 스트림일 경우 인코딩 추정 못 함
+    result = chardet.detect(content)
+    return result.get("encoding")
+
+
+def try_read(content_bytes: bytes, encoding, sep=None):
+    try:
+        if sep:
+            df = pd.read_csv(pd.io.common.BytesIO(content_bytes), encoding=encoding, sep=sep, engine='python')
+        else:
+            df = pd.read_csv(pd.io.common.BytesIO(content_bytes), encoding=encoding, engine='python')
+        return df
+    except:
         return None
 
 
-def read_csv_robust(path):
-    tried = []
-    enc_guess = guess_encoding(path)
+def score_validity(df: pd.DataFrame) -> float:
+    if df is None or df.empty:
+        return 1.0
 
-    if enc_guess:
-        try_order = [enc_guess] + [e for e in TRY_ENCODINGS if e != enc_guess]
+    sample = ""
+    sample += " ".join(map(str, df.columns[:10].tolist()))
+
+    if len(df) > 0:
+        sample += " " + " ".join(map(str, df.iloc[0].tolist()))
+
+    bad = sample.count('�') + sample.count('?') + sample.count('\ufffd')
+    return bad / max(len(sample), 1)
+
+
+def robust_load_csv(content: bytes):
+    """bytes 기반 CSV 완전 자동 판독"""
+    preferred = detect_encoding_from_bytes(content)
+
+    encodings = []
+
+    if preferred and preferred in ENCODING_ORDER:
+        encodings.append(preferred)
+
+    for e in ENCODING_ORDER:
+        if e not in encodings:
+            encodings.append(e)
+
+    candidates = []
+
+    for enc in encodings:
+        for sep in SEPARATORS:
+            df = try_read(content, enc, sep)
+            score = score_validity(df)
+            candidates.append((score, enc, sep, df))
+
+    candidates.sort(key=lambda x: x[0])
+
+    best_score, best_enc, best_sep, best_df = candidates[0]
+
+    # BOM 제거
+    best_df.columns = [col.replace("\ufeff", "") for col in best_df.columns]
+
+    # 컬럼이 1개일 경우 whitespace 강제 split
+    if best_df.shape[1] < 2:
+        best_df = try_read(content, best_enc, sep=r"\s+")
+        if best_df is not None:
+            best_df.columns = [col.replace("\ufeff", "") for col in best_df.columns]
+
+    return best_df, best_enc, best_sep
+
+
+def read_csv_robust(path_or_bytes, preferred_encoding=None):
+    """
+    path(str) 또는 BytesIO, 혹은 순수 bytes 모두 처리
+    """
+    if isinstance(path_or_bytes, str):
+        with open(path_or_bytes, "rb") as f:
+            content_bytes = f.read()
+
+    elif hasattr(path_or_bytes, "read"):  # BytesIO or File-like
+        content_bytes = path_or_bytes.read()
+
+    elif isinstance(path_or_bytes, bytes):  # already bytes
+        content_bytes = path_or_bytes
+
     else:
-        try_order = TRY_ENCODINGS[:]
+        raise TypeError("path_or_bytes must be bytes, file path, or file-like object")
 
-    best_df = None
-    best_enc = None
-    best_bad = 1.0
-    last_err = None
-
-    for enc in try_order:
-        if enc in tried:
-            continue
-        tried.append(enc)
-
-        try:
-            df = pd.read_csv(path, encoding=enc)
-        except Exception as e:
-            last_err = e
-            continue
-
-        text_sample = " ".join(map(str, list(df.columns)[:30]))
-        if len(df) > 0:
-            text_sample += " " + " ".join(map(str, df.iloc[0].astype(str).tolist()))
-
-        bad = (text_sample.count('?') + text_sample.count('�')) / max(len(text_sample), 1)
-
-        if bad < 0.01:
-            return df, enc
-
-        if bad < best_bad:
-            best_bad = bad
-            best_df = df
-            best_enc = enc
-
-    if best_df is not None:
-        # 파일명 추출 안전 처리
-        if isinstance(path, str):
-            filename = os.path.basename(path)
-        else:
-            filename = getattr(path, 'name', 'uploaded_file')
-
-        if best_bad > 0.1:
-            print(f"[경고] {filename}: 인코딩이 완벽하진 않을 수 있음 (깨짐 비율 {best_bad:.2f}), 사용 enc={best_enc}")
-        return best_df, best_enc
-
-    try:
-        df = pd.read_csv(path, encoding="utf-8", encoding_errors="replace")
-    except Exception as e:
-        if isinstance(path, str):
-            filename = os.path.basename(path)
-        else:
-            filename = getattr(path, 'name', 'uploaded_file')
-        raise RuntimeError(f"{filename}: CSV 로드 실패. 마지막 오류: {e}")
-
-    if isinstance(path, str):
-        filename = os.path.basename(path)
-    else:
-        filename = getattr(path, 'name', 'uploaded_file')
-    # print(f"[경고] {filename}: 모든 인코딩 시도 실패 → utf-8 + replace 로 강제 로드. 마지막 오류: {last_err}")
-    return df, "utf-8(replace)"
+    df, enc, sep = robust_load_csv(content_bytes)
+    return df, enc
 
 
 def clean_for_analysis(df: pd.DataFrame) -> pd.DataFrame:
@@ -102,7 +115,6 @@ def clean_for_analysis(df: pd.DataFrame) -> pd.DataFrame:
         df = df.drop(columns=drop_cols)
 
     df = df.replace(r'^\s*$', pd.NA, regex=True)
-
     return df
 
 
@@ -116,33 +128,17 @@ def make_clean_csvs_to_db(base_path: str = BASE_PATH,
     conn = sqlite3.connect(db_path)
 
     for path in csv_files:
-        if isinstance(path, str):
-            filename = os.path.basename(path)
-        else:
-            filename = getattr(path, 'name', 'uploaded_file')
-
-        if filename.endswith("_clean.csv"):
-            # 이미 인코딩 완료된 파일은 건너뛰기
-            continue
-
         try:
             df_raw, enc = read_csv_robust(path)
             df_clean = clean_for_analysis(df_raw)
 
-            # 예: 테이블명은 파일명에서 확장자 뺀 것으로 사용(원하면 규칙 변경 가능)
-            table_name = os.path.splitext(filename)[0]
+            table_name = os.path.splitext(os.path.basename(path))[0]
 
-            # 덮어쓰기 방식으로 DB에 저장
             df_clean.to_sql(table_name, conn, if_exists='replace', index=False)
-            print(f"[완료] {filename} => DB 테이블 '{table_name}' 저장 (읽은 인코딩: {enc})")
+
+            print(f"[완료] {path} → 테이블 '{table_name}', 인코딩={enc}")
 
         except Exception as e:
-            print(f"[오류] {filename} 처리 실패: {e}")
+            print(f"[실패] {path} 처리 중 오류 발생: {e}")
 
     conn.close()
-
-
-# bdf = pd.read_csv("data_cleaned/mc_clean.csv", encoding="utf-8-sig")
-# bdf.info()
-# bdf['date_time'] = pd.to_datetime(bdf['date_time'])
-# bdf.isna().sum()

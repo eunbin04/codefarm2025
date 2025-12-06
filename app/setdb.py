@@ -5,34 +5,37 @@ from app_details.cleandata_fixfile import (
     upload_preclean, get_table_list, export_table_to_df
 )
 
-
 DB_PATH = "codefarmdb.sqlite"
 
 
 def show_setdb():
     st.title("🛢️ DB 관리")
 
-    # ----------------------------------
-    # 1. 데이터 업로드
-    # ----------------------------------
+    # 초기값 미리 정의
+    if "df_preview" not in st.session_state:
+        st.session_state.df_preview = None
+    if "file_path" not in st.session_state:
+        st.session_state.file_path = None
+    if "enc_used" not in st.session_state:
+        st.session_state.enc_used = None
+
     st.markdown("---")
     st.subheader("📤 데이터 업로드")
 
-    uploaded_file = st.file_uploader(
-        "데이터 파일 업로드",
-        type=['csv', 'xlsx']
-    )
+    uploaded_file = st.file_uploader("데이터 파일 업로드", type=['csv', 'xlsx'])
 
-    file_path, enc_used, df_preview = upload_preclean(uploaded_file)
+    if uploaded_file is not None:
+        if st.button("업로드하기"):
+            file_path, enc_used, df_preview = upload_preclean(uploaded_file)
+            st.session_state.df_preview = df_preview
+            st.session_state.file_path = file_path
+            st.session_state.enc_used = enc_used
+            st.success(f"데이터가 DB에 저장되었습니다. 테이블명: {file_path}, 인코딩: {enc_used}")
 
-    if df_preview is not None:
-        st.write("데이터 미리보기 (끝에서 5행)")
-        st.dataframe(df_preview, width='stretch')
-        st.success(f"데이터가 DB에 저장되었습니다. (인코딩: {enc_used})")
+    if st.session_state.df_preview is not None:
+        st.write("데이터 미리보기")
+        st.dataframe(st.session_state.df_preview, width='stretch')
 
-    # ----------------------------------
-    # 2. DB 테이블 관리
-    # ----------------------------------
     st.markdown("---")
     st.subheader("🗂️ DB 테이블 관리")
 
@@ -55,9 +58,6 @@ def show_setdb():
         st.write(f"**{selected_table}** 테이블 미리보기")
         st.dataframe(db_preview, width='stretch')
 
-    # ----------------------------------
-    # 3. 테이블 이름 변경
-    # ----------------------------------
     st.markdown("---")
     st.subheader("✏️ 테이블 이름 변경")
 
@@ -85,9 +85,6 @@ def show_setdb():
                 except Exception as e:
                     st.error(f"이름 변경 중 오류가 발생했습니다: {e}")
 
-    # ----------------------------------
-    # 4. 테이블 삭제
-    # ----------------------------------
     st.markdown("---")
     st.subheader("💣 테이블 삭제")
 
