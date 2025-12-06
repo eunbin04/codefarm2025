@@ -81,6 +81,7 @@ def show_perdata():
     # ------------------------------
     # 탭 구성 (리포트 탭으로 변경)
     # ------------------------------
+    st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
     tab_data, tab_stats, tab_report = st.tabs(["📄 데이터", "📈 센서별 그래프", "📋 리포트 생성"])
     all_columns = filtered.columns.tolist()
 
@@ -142,10 +143,12 @@ def show_perdata():
                         index=0
                     )
                 with col3:
+                    st.markdown("<div style='height:33px;'></div>", unsafe_allow_html=True)
                     show_original = st.checkbox("원본 데이터와 비교", value=True)
                 
                 # 결과 표시 영역
                 for var in filter_vars:
+                    st.divider()
                     st.markdown(f"### `{var}` 필터링 결과")
                     
                     series = filtered[var].dropna()
