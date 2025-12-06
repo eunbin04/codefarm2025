@@ -1,4 +1,5 @@
 # cleandata_fixfile.py
+# cleandata_fixfile.py
 import pandas as pd
 import io
 import os
@@ -7,45 +8,63 @@ import chardet
 from precleaning.incoding import read_csv_robust, clean_for_analysis
 
 
-def upload_preclean(uploaded_file):
-    if uploaded_file is not None:
+def upload_preclean(uploaded_file, save_to_db=True):
+    """
+    uploaded_file을 읽어 전처리하고,
+    - save_to_db=True  : DB에 저장 + (table_name, enc_used, df_preview) 반환
+    - save_to_db=False : DB에 저장하지 않고 (None, enc_used, df_preview) 반환
+    """
+    if uploaded_file is None:
+        return None, None, None
 
-        original_name = os.path.splitext(uploaded_file.name)[0]
+    # 파일명(확장자 제거)
+    original_name = os.path.splitext(uploaded_file.name)[0]
 
-        conn = sqlite3.connect('codefarmdb.sqlite')
+    # 파일 내용 bytes
+    content = uploaded_file.getbuffer()
+    content_bytes = bytes(content)
+
+    # 인코딩 추정
+    detected = chardet.detect(content_bytes)
+    enc_guess = detected.get("encoding")
+
+    # CSV / EXCEL 분기
+    if uploaded_file.type == "text/csv":
+        df_raw, enc_detected = read_csv_robust(
+            io.BytesIO(content_bytes),
+            preferred_encoding=enc_guess,
+        )
+        df_clean = clean_for_analysis(df_raw)
+        enc_used = enc_detected
+    else:
+        df_clean = pd.read_excel(io.BytesIO(content_bytes))
+        df_clean = clean_for_analysis(df_clean)
+        enc_used = "excel"
+
+    table_name = None
+
+    if save_to_db:
+        # DB 연결
+        conn = sqlite3.connect("codefarmdb.sqlite")
         cursor = conn.cursor()
 
+        # 기존 테이블 목록
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         existing_tables = [row[0] for row in cursor.fetchall()]
 
+        # 중복 시 (1), (2) 붙이기
         table_name = original_name
         count = 1
         while table_name in existing_tables:
             table_name = f"{original_name}({count})"
             count += 1
 
-        content = uploaded_file.getbuffer()
-
-        content_bytes = bytes(content)
-        detected = chardet.detect(content_bytes)
-        enc_guess = detected.get("encoding")
-
-        if uploaded_file.type == 'text/csv':
-            df_raw, enc_detected = read_csv_robust(io.BytesIO(content), preferred_encoding=enc_guess)
-            df_clean = clean_for_analysis(df_raw)
-            enc_used = enc_detected
-        else:
-            df_clean = pd.read_excel(io.BytesIO(content))
-            df_clean = clean_for_analysis(df_clean)
-            enc_used = 'excel'
-
-        df_clean.to_sql(table_name, conn, if_exists='replace', index=False)
+        # DB 저장
+        df_clean.to_sql(table_name, conn, if_exists="replace", index=False)
         conn.close()
 
-        return table_name, enc_used, df_clean.head()
-
-    else:
-        return None, None, None
+    # 미리보기용 head 반환
+    return table_name, enc_used, df_clean.head()
 
 
 

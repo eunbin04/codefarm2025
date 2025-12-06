@@ -11,30 +11,58 @@ DB_PATH = "codefarmdb.sqlite"
 def show_setdb():
     st.title("🛢️ DB 관리")
 
-    # 초기값 미리 정의
-    if "df_preview" not in st.session_state:
-        st.session_state.df_preview = None
-    if "file_path" not in st.session_state:
-        st.session_state.file_path = None
-    if "enc_used" not in st.session_state:
-        st.session_state.enc_used = None
-
     st.markdown("---")
     st.subheader("📤 데이터 업로드")
 
-    uploaded_file = st.file_uploader("데이터 파일 업로드", type=['csv', 'xlsx'])
+    # 상태 초기화
+    if "preview_df" not in st.session_state:
+        st.session_state.preview_df = None
+    if "preview_file_name" not in st.session_state:
+        st.session_state.preview_file_name = None
+    if "uploaded_info" not in st.session_state:
+        st.session_state.uploaded_info = None
 
-    if uploaded_file is not None:
+    uploaded_file = st.file_uploader("데이터 파일 업로드", type=["csv", "xlsx"])
+
+    # 1) 파일이 새로 올라왔는지 체크
+    if uploaded_file is None:
+        # 파일이 아예 없으면 미리보기도 초기화
+        st.session_state.preview_df = None
+        st.session_state.preview_file_name = None
+
+    else:
+        # 파일 이름이 바뀌었으면(=다른 파일 업로드) 미리보기 초기화 후 다시 생성
+        if uploaded_file.name != st.session_state.preview_file_name:
+            table_name, enc_used, df_preview = upload_preclean(
+                uploaded_file,
+                save_to_db=False,   # 미리보기만
+            )
+            st.session_state.preview_df = df_preview
+            st.session_state.preview_file_name = uploaded_file.name
+            st.session_state.preview_enc = enc_used
+
+    # 2) 미리보기: 파일이 있고, 아직 업로드 전일 때만 표시
+    if st.session_state.preview_df is not None:
+        st.write("데이터 미리보기 (업로드 전 확인용)")
+        st.dataframe(st.session_state.preview_df, use_container_width=True)
+        st.caption(f"인코딩: {st.session_state.preview_enc}")
+
+        # 3) 업로드 확정 버튼
         if st.button("업로드하기"):
-            file_path, enc_used, df_preview = upload_preclean(uploaded_file)
-            st.session_state.df_preview = df_preview
-            st.session_state.file_path = file_path
-            st.session_state.enc_used = enc_used
-            st.success(f"데이터가 DB에 저장되었습니다. 테이블명: {file_path}, 인코딩: {enc_used}")
+            table_name, enc_used, df_for_db = upload_preclean(
+                uploaded_file,
+                save_to_db=True,    # 실제 DB 저장
+            )
+            st.session_state.uploaded_info = (table_name, enc_used)
 
-    if st.session_state.df_preview is not None:
-        st.write("데이터 미리보기")
-        st.dataframe(st.session_state.df_preview, width='stretch')
+            # 업로드 후에는 미리보기 숨김
+            st.session_state.preview_df = None
+            st.session_state.preview_file_name = None
+
+            st.success(
+                f"데이터가 DB에 저장되었습니다. 테이블명: {table_name}"
+            )
+
 
     st.markdown("---")
     st.subheader("🗂️ DB 테이블 관리")
