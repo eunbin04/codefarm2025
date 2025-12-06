@@ -2,16 +2,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import numpy as np
-from app_details.cleandata_fixfile import (
-    upload_preclean,
-    get_table_list,
-    export_table_to_df, 
-)
-
+from app_details.cleandata_fixfile import get_table_list, export_table_to_df
+from app_details.perdata_report import generate_farm_report
 
 def show_perdata():
-
     st.title('📅 기간별 데이터')
     st.caption("농가 센서 데이터를 원하는 기간 동안 조회·통계·그래프로 확인할 수 있습니다.")
 
@@ -85,16 +79,16 @@ def show_perdata():
     filtered = filtered.dropna(axis=1, how='all')
 
     # ------------------------------
-    # 탭 구성
+    # 탭 구성 (리포트 탭으로 변경)
     # ------------------------------
-    tab_data, tab_stats, tab_detail = st.tabs(["📄 데이터", "📊 통계", "📈 상세 그래프"])
+    tab_data, tab_stats, tab_report = st.tabs(["📄 데이터", "📈 센서별 그래프", "📋 리포트 생성"])
     all_columns = filtered.columns.tolist()
 
     # ------------------------------------
     # 1) 데이터 탭
     # ------------------------------------
     with tab_data:
-        st.subheader("📄 데이터 다운로드")
+        st.subheader("📄 데이터 보기")
 
         if all_columns:
             selected_vars = st.multiselect(
@@ -121,101 +115,106 @@ def show_perdata():
             st.warning("해당 기간에는 유효한 데이터가 없습니다.")
 
     # ------------------------------------
-    # 2) 통계 탭
+    # 2) 스무딩/필터링 탭
     # ------------------------------------
     with tab_stats:
-        st.subheader("📊 통계 요약")
-
+        st.subheader("📈 센서별 스무딩 & 필터링")
+        
         if all_columns:
-            stats_vars = st.multiselect(
-                "통계 계산할 센서 선택",
+            # 필터링할 센서 선택
+            filter_vars = st.multiselect(
+                "필터링할 센서 선택",
                 options=all_columns,
-                default=all_columns[:6]
+                default=all_columns[:3]
             )
-
-            stats_vars = [v for v in stats_vars if v in filtered.columns]
-
-            if stats_vars:
-                desc = filtered[stats_vars].describe().T
-                desc.rename(
-                    columns={
-                        'mean': '평균',
-                        'min': '최소',
-                        'max': '최대',
-                        'std': '표준편차',
-                        '25%': '1Q',
-                        '50%': '중앙값',
-                        '75%': '3Q'
-                    },
-                    inplace=True
-                )
-                st.dataframe(desc, width='stretch')
-            else:
-                st.info("통계 계산할 변수를 선택하세요.")
-        else:
-            st.warning("데이터가 없습니다.")
-
-    # ------------------------------------
-    # 3) 상세 그래프 탭
-    # ------------------------------------
-    with tab_detail:
-        st.subheader("📈 변수별 상세 그래프")
-
-        if all_columns:
-            cols_btn = st.columns(4)
-            for i, col_name in enumerate(all_columns):
-                if cols_btn[i % 4].button(col_name):
-                    st.session_state["detail_var"] = col_name
-
-            detail_var = st.session_state.get("detail_var")
-
-            if detail_var and detail_var in filtered.columns:
-                st.markdown(f"### • 선택된 변수: `{detail_var}`")
-                series = filtered[detail_var].dropna()
-
-                if not series.empty:
-                    Q1 = series.quantile(0.25)
-                    Q3 = series.quantile(0.75)
-                    IQR = Q3 - Q1
-                    lower = Q1 - 1.5 * IQR
-                    upper = Q3 + 1.5 * IQR
-
-                    fig = go.Figure()
-
-                    fig.add_trace(go.Scatter(
-                        x=series.index,
-                        y=series.values,
-                        mode='lines',
-                        name='값',
-                        line=dict(color="#1E88E5")
-                    ))
-
-                    fig.add_trace(go.Scatter(
-                        x=np.concatenate([series.index, series.index[::-1]]),
-                        y=np.concatenate([[lower]*len(series),
-                                          [upper]*len(series[::-1])]),
-                        fill='toself',
-                        fillcolor='rgba(100,200,100,0.2)',
-                        line=dict(color='rgba(255,255,255,0)'),
-                        hoverinfo="skip",
-                        name='IQR 범위',
-                    ))
-
-                    fig.update_layout(
-                        xaxis_title='시간',
-                        yaxis_title=detail_var,
-                        hovermode='x unified',
-                        height=500
+            
+            filter_vars = [v for v in filter_vars if v in filtered.columns]
+            
+            if filter_vars:
+                # 스무딩 파라미터 설정
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    window_size = st.slider("이동평균 창 크기", 3, 50, 10, 1)
+                with col2:
+                    smooth_method = st.selectbox(
+                        "스무딩 방법",
+                        ["이동평균", "가우시안 필터", "저역통과 필터"],
+                        index=0
                     )
-
+                with col3:
+                    show_original = st.checkbox("원본 데이터와 비교", value=True)
+                
+                # 결과 표시 영역
+                for var in filter_vars:
+                    st.markdown(f"### `{var}` 필터링 결과")
+                    
+                    series = filtered[var].dropna()
+                    if len(series) < window_size:
+                        st.warning(f"`{var}` 데이터가 부족합니다.")
+                        continue
+                    
+                    # 스무딩 적용
+                    if smooth_method == "이동평균":
+                        smoothed = series.rolling(window=window_size, center=True).mean()
+                    elif smooth_method == "가우시안 필터":
+                        try:
+                            from scipy.ndimage import gaussian_filter1d
+                            smoothed = pd.Series(
+                                gaussian_filter1d(series.values, sigma=window_size/5),
+                                index=series.index
+                            )
+                        except ImportError:
+                            st.warning("scipy가 설치되지 않았습니다. pip install scipy")
+                            continue
+                    else:  # 저역통과 필터
+                        try:
+                            from scipy.signal import butter, filtfilt
+                            b, a = butter(2, 0.1, btype='low')
+                            smoothed = pd.Series(
+                                filtfilt(b, a, series.values),
+                                index=series.index
+                            )
+                        except ImportError:
+                            st.warning("scipy가 설치되지 않았습니다. pip install scipy")
+                            continue
+                    
+                    # 그래프 생성
+                    fig = go.Figure()
+                    if show_original:
+                        fig.add_trace(go.Scatter(
+                            x=series.index, y=series.values,
+                            mode='lines', name='원본', line=dict(color="#FF6B6B")
+                        ))
+                    fig.add_trace(go.Scatter(
+                        x=smoothed.index, y=smoothed.values,
+                        mode='lines', name='스무딩', line=dict(color="#1E88E5", width=3)
+                    ))
+                    
+                    fig.update_layout(
+                        title=f"{var} - {smooth_method}",
+                        xaxis_title='시간', yaxis_title=var,
+                        height=300, hovermode='x unified'
+                    )
                     st.plotly_chart(fig, width='stretch')
-
-                else:
-                    st.info("해당 변수에 데이터가 없습니다.")
-
+                    
+                    # 다운로드 버튼
+                    smoothed_df = pd.DataFrame({
+                        '원본': series, f'{smooth_method}_{window_size}': smoothed
+                    })
+                    csv = smoothed_df.to_csv().encode('utf-8')
+                    st.download_button(
+                        label=f":material/download: {var} 필터링 데이터 다운로드",
+                        data=csv,
+                        file_name=f"{selected_table}_{var}_smoothed.csv",
+                        mime='text/csv'
+                    )
             else:
-                st.info("아래 버튼에서 상세히 볼 변수를 선택하세요.")
-
+                st.info("필터링할 센서를 1개 이상 선택하세요.")
         else:
             st.warning("데이터가 없습니다.")
 
+    # ------------------------------------
+    # 3) 리포트 탭 (모듈 호출)
+    # ------------------------------------
+    with tab_report:
+        generate_farm_report(filtered, selected_table, start_date, end_date, all_columns)
