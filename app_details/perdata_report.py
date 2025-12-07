@@ -15,10 +15,10 @@ import numpy as np
 
 # ==== 나눔고딕 폰트 등록 ====
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FONT_PATH = os.path.join(BASE_DIR, "fonts", "NanumGothic.ttf")
+FONT_PATH = os.path.join(BASE_DIR, "data", "fonts", "NanumGothic.ttf")
 pdfmetrics.registerFont(TTFont("NanumGothic", FONT_PATH))
 
-BOLD_FONT_PATH = os.path.join(BASE_DIR, "fonts", "NanumGothicBold.ttf")
+BOLD_FONT_PATH = os.path.join(BASE_DIR, "data", "fonts", "NanumGothicBold.ttf")
 pdfmetrics.registerFont(TTFont("NanumGothic-Bold", BOLD_FONT_PATH))
 
 
@@ -79,6 +79,7 @@ def generate_farm_report(filtered, selected_table, start_date, end_date, all_col
     with col2:
         period_type = st.selectbox("집계 기간", ["일별", "시간별", "전체"], index=2)
     with col3:
+        st.markdown("<div style='height:33px;'></div>", unsafe_allow_html=True)
         include_anomaly = st.checkbox("이상치 표시 포함", value=True)
     
     if st.button("🚀 리포트 생성", type="primary") and report_vars:
