@@ -11,20 +11,33 @@ warnings.filterwarnings('ignore')
 def robust_mad(x):
     return np.median(np.abs(x - np.median(x)))
 
-def find_outlier_df(df, temp_index, humi_index, light_index):
-    """
-    df에서 온도/습도/조도 이상치를 탐지하여,
-    '센서 오류로 판단된 지점'만 NaN으로 마킹해 반환합니다.
-    - 온도/습도: 물리 범위 + diff+zscore + 시간대별 3.5σ + 온도·습도 상관관계 기반 필터
-    - 조도(PPFD): robust 통계(IQR, MAD, quantile) + spike + 낮시간 저값 + 구름 패턴 +
-              최소 지속시간 조건 + 환경 마스크를 통해 센서 오류만 남김
-    """
+def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=None):
+    """timestamp_index 우선 사용 → 항상 DatetimeIndex 보장"""
     cols = df.columns.tolist()
     temp_col = cols[temp_index]
     humi_col = cols[humi_index]
     light_col = cols[light_index]
-
+    
     dataset = df.copy()
+    
+    # 🔴 타임스탬프 기반 인덱스 설정 (우선순위: timestamp_index > date_time)
+    is_datetime_index = False
+    if timestamp_index is not None and cols[timestamp_index] in dataset.columns:
+        timestamp_col = cols[timestamp_index]
+        dataset[timestamp_col] = pd.to_datetime(dataset[timestamp_col], errors='coerce')
+        dataset = dataset.dropna(subset=[timestamp_col])  # 타임스탬프 NaN 제거
+        dataset = dataset.set_index(timestamp_col).sort_index()
+        dataset = dataset[~dataset.index.duplicated(keep='first')]
+        is_datetime_index = True
+    elif 'date_time' in dataset.columns:
+        dataset['date_time'] = pd.to_datetime(dataset['date_time'], errors='coerce')
+        dataset = dataset.dropna(subset=['date_time'])
+        dataset = dataset.set_index('date_time').sort_index()
+        dataset = dataset[~dataset.index.duplicated(keep='first')]
+        is_datetime_index = True
+    else:
+        # 최후의 수단: RangeIndex
+        dataset.index = pd.RangeIndex(len(dataset))
 
     # 1. 인덱스 설정 + 중복 인덱스 정리 (핵심 수정 1)
     if 'date_time' in dataset.columns:

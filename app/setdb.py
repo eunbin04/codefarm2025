@@ -8,7 +8,6 @@ from app_details.cleandata_fixfile import (
 
 DB_PATH = "codefarmdb.sqlite"
 
-
 def show_setdb():
     st.title("🛢️ DB 관리")
 
@@ -30,7 +29,6 @@ def show_setdb():
         # 파일이 아예 없으면 미리보기도 초기화
         st.session_state.preview_df = None
         st.session_state.preview_file_name = None
-
     else:
         # 파일 이름이 바뀌었으면(=다른 파일 업로드) 미리보기 초기화 후 다시 생성
         if uploaded_file.name != st.session_state.preview_file_name:
@@ -45,16 +43,26 @@ def show_setdb():
     # 2) 미리보기: 파일이 있고, 아직 업로드 전일 때만 표시
     if st.session_state.preview_df is not None:
         st.write("데이터 미리보기 (업로드 전 확인용)")
-        st.dataframe(st.session_state.preview_df, width='stretch')
+        st.dataframe(st.session_state.preview_df.head(), width='stretch')
         st.caption(f"인코딩: {st.session_state.preview_enc}")
 
+        # 🔴 타임스탬프 열 선택 (필수)
+        preview_columns = st.session_state.preview_df.columns.tolist()
+        timestamp_col = st.selectbox(
+            "타임스탬프 열 선택",
+            options=preview_columns,
+            index=0,
+            help="날짜/시간이 들어있는 열을 선택하세요 (예: date_time, timestamp, datetime 등)"
+        )
+
         # 3) 업로드 확정 버튼
-        if st.button("업로드하기"):
+        if st.button("업로드하기", type="primary"):
             table_name, enc_used, df_for_db = upload_preclean(
                 uploaded_file,
                 save_to_db=True,    # 실제 DB 저장
+                timestamp_col=timestamp_col  # 🔴 전달
             )
-            st.session_state.uploaded_info = (table_name, enc_used)
+            st.session_state.uploaded_info = (table_name, enc_used, timestamp_col)
 
             # 업로드 후에는 미리보기 숨김
             st.session_state.preview_df = None
@@ -64,10 +72,10 @@ def show_setdb():
                 f"데이터가 DB에 저장되었습니다. 테이블명: {table_name}"
             )
 
-
     st.markdown("---")
     st.subheader("🗂️ DB 테이블 관리")
 
+    # 🔴 table_metadata 제외한 테이블만 표시
     tables = get_table_list(DB_PATH)
     if not tables:
         st.info("현재 DB에 저장된 테이블이 없습니다. 먼저 데이터를 업로드해 주세요.")
@@ -82,10 +90,14 @@ def show_setdb():
     )
 
     db_df = None
+    timestamp_info = None
     if selected_table:
-        db_df, db_preview = export_table_to_df(selected_table, DB_PATH)
+        db_df, db_preview, timestamp_info = export_table_to_df(selected_table, DB_PATH)
         st.write(f"**{selected_table}** 테이블 미리보기")
         st.dataframe(db_preview, width='stretch')
+        
+        if timestamp_info:
+            st.success(f"✅ 타임스탬프 열: **{timestamp_info}**")
 
     st.markdown("---")
     st.subheader("✏️ 테이블 이름 변경")
@@ -107,6 +119,14 @@ def show_setdb():
                     conn = sqlite3.connect(DB_PATH)
                     cur = conn.cursor()
                     cur.execute(f"ALTER TABLE [{selected_table}] RENAME TO [{new_name}];")
+                    
+                    # 메타데이터도 함께 업데이트
+                    cur.execute("""
+                        UPDATE table_metadata 
+                        SET table_name = ? 
+                        WHERE table_name = ?
+                    """, (new_name, selected_table))
+                    
                     conn.commit()
                     conn.close()
                     st.success(f"'{selected_table}' → '{new_name}' 으로 이름이 변경되었습니다.")
@@ -129,6 +149,7 @@ def show_setdb():
                 conn = sqlite3.connect(DB_PATH)
                 cur = conn.cursor()
                 cur.execute(f"DROP TABLE IF EXISTS [{selected_table}];")
+                cur.execute("DELETE FROM table_metadata WHERE table_name = ?", (selected_table,))
                 conn.commit()
                 conn.close()
                 st.success(f"'{selected_table}' 테이블이 삭제되었습니다.")
@@ -136,7 +157,6 @@ def show_setdb():
                 st.rerun()
             except Exception as e:
                 st.error(f"테이블 삭제 중 오류가 발생했습니다: {e}")
-
 
 if __name__ == "__main__":
     show_setdb()

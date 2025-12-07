@@ -19,38 +19,62 @@ def show_perdata():
     selected_table = st.selectbox("데이터 파일 선택", tables)
 
     # ------------------------------
-    # DB에서 DataFrame 불러오기 (tuple 반환이므로 첫 원소만 사용)
+    # DB에서 DataFrame 불러오기 (타임스탬프 정보 포함)
     # ------------------------------
     try:
-        df, df_tail = export_table_to_df(selected_table)
+        df, df_tail, timestamp_col = export_table_to_df(selected_table)
     except Exception as e:
         st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {e}")
         return
 
     # ------------------------------
-    # 무조건 첫 번째 컬럼을 Timestamp로 지정
+    # 🔴 타임스탬프 열 자동 인식 (메타데이터 우선 → 첫 번째 컬럼 → 사용자 선택)
     # ------------------------------
-    try:
-        timestamp_col = df.columns[0]
-        df[timestamp_col] = pd.to_datetime(df[timestamp_col], errors='coerce')
-        df = df.set_index(timestamp_col)
-        df.index.name = "Timestamp"
-    except:
-        st.error("첫 번째 컬럼을 Timestamp로 변환할 수 없습니다.\nCSV/Excel 파일의 첫 컬럼이 시간이어야 합니다.")
-        st.dataframe(df.head(), width='stretch')
-        return
+    timestamp_idx = None
+    
+    # 1단계: 메타데이터에서 타임스탬프 열 확인
+    if timestamp_col and timestamp_col in df.columns:
+        timestamp_idx = list(df.columns).index(timestamp_col)
+        st.success(f"✅ 타임스탬프 인식 완료: **{timestamp_col}**")
+        try:
+            df[timestamp_col] = pd.to_datetime(df[timestamp_col], errors='coerce')
+            df = df.set_index(timestamp_col)
+            df.index.name = "Timestamp"
+        except Exception as e:
+            st.warning(f"타임스탬프 변환 실패: {e}. 수동 선택 필요")
+            timestamp_col = None
+    
+    # 3단계: 사용자 수동 선택 (최후의 수단)
+    if timestamp_col is None:
+        col_options = df.columns.tolist()
+        timestamp_col_manual = st.selectbox(
+            "타임스탬프 열 선택",
+            options=col_options,
+            index=0,
+            help="날짜/시간이 들어있는 열을 선택하세요"
+        )
+        try:
+            df[timestamp_col_manual] = pd.to_datetime(df[timestamp_col_manual], errors='coerce')
+            df = df.set_index(timestamp_col_manual)
+            df.index.name = "Timestamp"
+            timestamp_col = timestamp_col_manual
+            st.info(f"선택된 타임스탬프: **{timestamp_col}**")
+        except Exception as e:
+            st.error(f"선택한 '{timestamp_col_manual}' 열을 타임스탬프로 변환할 수 없습니다: {e}")
+            st.dataframe(df.head(), width='stretch')
+            return
 
     data = df
 
     if data.index.isna().all():
-        st.error("Timestamp 변환에 실패했습니다. 파일의 첫 번째 컬럼이 날짜/시간이어야 합니다.")
+        st.error("Timestamp 변환에 실패했습니다. 파일의 타임스탬프 열에 올바른 날짜/시간 형식이어야 합니다.")
         st.dataframe(df.head(), width='stretch')
         return
 
     # ------------------------------
     # 날짜 선택 범위 생성
     # ------------------------------
-    valid_dates = sorted(list(set(df.index.date)))  # data 대신 df 사용
+    valid_dates = sorted(list(set(data.index.date)))
     if len(valid_dates) == 0:
         st.warning("Timestamp가 올바르지 않아 분석을 진행할 수 없습니다.")
         return
@@ -79,7 +103,7 @@ def show_perdata():
     filtered = filtered.dropna(axis=1, how='all')
 
     # ------------------------------
-    # 탭 구성 (리포트 탭으로 변경)
+    # 탭 구성
     # ------------------------------
     st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
     tab_data, tab_stats, tab_report = st.tabs(["📄 데이터", "📈 센서별 그래프", "📋 리포트 생성"])
@@ -101,7 +125,10 @@ def show_perdata():
             selected_vars = [v for v in selected_vars if v in filtered.columns]
 
             if selected_vars:
-                st.dataframe(filtered[selected_vars], width='stretch')
+                display_df = filtered[selected_vars].copy()
+                display_df.index.name = "Timestamp"
+                st.dataframe(display_df, width='stretch')
+                
                 csv = filtered[selected_vars].to_csv().encode('utf-8')
 
                 st.download_button(
@@ -221,3 +248,6 @@ def show_perdata():
     # ------------------------------------
     with tab_report:
         generate_farm_report(filtered, selected_table, start_date, end_date, all_columns)
+
+if __name__ == "__main__":
+    show_perdata()
