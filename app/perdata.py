@@ -194,7 +194,7 @@ def show_perdata():
                     ))
                     
                     fig.update_layout(
-                        title=f"{var} - {smooth_method}",
+                        title=f"{smooth_method}",
                         xaxis_title='시간', yaxis_title=var,
                         height=300, hovermode='x unified'
                     )

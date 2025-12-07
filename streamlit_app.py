@@ -6,7 +6,7 @@ from app.cleandata import show_cleandata
 from app.vpd import show_vpd
 from app.weather import show_weather
 from app.perdata import show_perdata
-from app.nowdata import show_nowdata
+from app.rtdata import show_rtdata
 from app.alarms import show_alarms
 from app.settings import show_settings
 from auth import authenticate, load_users
@@ -22,7 +22,7 @@ if "user" not in st.session_state:
 users_df = load_users()
 
 def login_page():
-    st.title("CODEFARM 로그인")
+    st.title("LOGIN")
     username = st.text_input("아이디")
     password = st.text_input("비밀번호", type="password")
 
@@ -118,7 +118,7 @@ elif st.session_state.page == '기상 정보':
 elif st.session_state.page == '알림 기록':
     show_alarms()
 elif st.session_state.page == '실시간 데이터':
-    show_nowdata()
+    show_rtdata()
 elif st.session_state.page == 'VPD 계산기':
     show_vpd()
 elif st.session_state.page == '설정':

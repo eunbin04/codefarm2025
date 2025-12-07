@@ -3,7 +3,6 @@ import streamlit as st
 import pandas as pd
 import time
 import warnings
-
 from app_details.alarms_db import (
     initialize_alarms_db,
     load_alarm_data_from_db,

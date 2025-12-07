@@ -80,6 +80,7 @@ def train_model():
 
     # --- 2. 모델 학습 ---
     target_list = ['Temperature', 'Humidity', 'Solar_Radiation']
+    
     df_train_full = df.dropna(subset=target_list)
 
     model_dir = "outlier_fix/trained_models"

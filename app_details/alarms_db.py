@@ -7,7 +7,6 @@ import streamlit as st
 from datetime import datetime
 import pytz
 
-
 ALARMS_DB_PATH = "alarms.db"
 SETTINGS_FILE = "config/settings.json"
 

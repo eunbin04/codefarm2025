@@ -1,10 +1,9 @@
 # outlier_fix/predict.py
 import pandas as pd
 import joblib, json, os
-import numpy as np
+
 
 SETTINGS_FILE = "config/settings.json"
-
 
 def load_settings():
     if os.path.exists(SETTINGS_FILE):
@@ -66,7 +65,7 @@ def correct_last_row_outlier(df: pd.DataFrame, settings=None):
     if not target_to_predict:
         return df, "보정할 이상치가 없습니다.", None, None
 
-    model_filename = f"outlier_fix/trained_models/model_{target_to_predict}.pkl"
+    model_filename = f"outlier_fix/trained_models_rt/model_{target_to_predict}_rt.pkl"
 
     try:
         model = joblib.load(model_filename)
