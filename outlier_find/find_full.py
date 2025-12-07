@@ -356,6 +356,10 @@ def find_outlier_df(df, temp_index, humi_index, light_index):
     dataset.loc[hum_fault.values, humi_col] = np.nan
     dataset.loc[light_fault.values, light_col] = np.nan
 
+    # 보조 컬럼 정리: weather_state 제거
+    if 'weather_state' in dataset.columns:
+        dataset = dataset.drop(columns=['weather_state'])
+
     # 인덱스 복구
     dataset = dataset.reset_index()
     return dataset

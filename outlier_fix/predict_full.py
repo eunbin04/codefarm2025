@@ -228,5 +228,10 @@ def correct_outlier_df(df, temp_index, humi_index, light_index):
     reverse_rename = {v: k for k, v in rename_map.items()}
     df_copy = df_copy.rename(columns=reverse_rename)
 
+    # 보조 컬럼 정리: hour, minute, lag 들 제거
+    drop_cols = ['hour', 'minute', 'temp_lag_1', 'humi_lag_1', 'solar_lag_1']
+    drop_cols = [c for c in drop_cols if c in df_copy.columns]
+    df_copy = df_copy.drop(columns=drop_cols)
+
     msg = "이상치 및 결측치 보정 완료" if changes_made else "수정할 이상치 및 결측치 없음"
     return df_copy, msg
