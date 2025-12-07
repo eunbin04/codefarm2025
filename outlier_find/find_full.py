@@ -8,10 +8,8 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-
 def robust_mad(x):
     return np.median(np.abs(x - np.median(x)))
-
 
 def find_outlier_df(df, temp_index, humi_index, light_index):
     """
@@ -19,7 +17,7 @@ def find_outlier_df(df, temp_index, humi_index, light_index):
     '센서 오류로 판단된 지점'만 NaN으로 마킹해 반환합니다.
     - 온도/습도: 물리 범위 + diff+zscore + 시간대별 3.5σ + 온도·습도 상관관계 기반 필터
     - 조도(PPFD): robust 통계(IQR, MAD, quantile) + spike + 낮시간 저값 + 구름 패턴 +
-                  최소 지속시간 조건 + 환경 마스크를 통해 센서 오류만 남김
+              최소 지속시간 조건 + 환경 마스크를 통해 센서 오류만 남김
     """
     cols = df.columns.tolist()
     temp_col = cols[temp_index]
@@ -28,10 +26,12 @@ def find_outlier_df(df, temp_index, humi_index, light_index):
 
     dataset = df.copy()
 
-    # 1. 인덱스 설정
+    # 1. 인덱스 설정 + 중복 인덱스 정리 (핵심 수정 1)
     if 'date_time' in dataset.columns:
         dataset['date_time'] = pd.to_datetime(dataset['date_time'])
         dataset = dataset.set_index('date_time').sort_index()
+        # 중복 인덱스 제거: 첫 번째 값만 유지
+        dataset = dataset[~dataset.index.duplicated(keep='first')]
     else:
         dataset.index = pd.RangeIndex(len(dataset))
 
@@ -62,16 +62,15 @@ def find_outlier_df(df, temp_index, humi_index, light_index):
     Z_THRESH = 4
 
     cond_temp_diff = pd.Series(np.abs(z_temp) > Z_THRESH,
-                               index=temp.index).fillna(False)
+                              index=temp.index).fillna(False)
     cond_hum_diff = pd.Series(np.abs(z_hum) > Z_THRESH,
                               index=hum.index).fillna(False)
 
-    # (3) 시간대별(시각 기준) 문맥 3.5σ 밴드
-    # 시각별 통계
+    # (3) 시간대별(시각 기준) 문맥 3.5σ 밴드 (핵심 수정 2)
+    # 시각별 통계 계산
     temp_nonan = temp.dropna()
     hum_nonan = hum.dropna()
-
-    # 시각: index.time 사용
+    
     hourly_temp_stats = temp_nonan.groupby(temp_nonan.index.time).agg(
         median_temp='median', std_temp='std'
     )
@@ -79,49 +78,49 @@ def find_outlier_df(df, temp_index, humi_index, light_index):
         median_hum='median', std_hum='std'
     )
 
-    # 온도 문맥
-    temp_with_ctx = temp_nonan.to_frame(name='temperature')
-    temp_with_ctx['time_of_day'] = temp_with_ctx.index.time
-    temp_with_ctx = temp_with_ctx.merge(
+    # 전체 데이터로 시간대 문맥 계산 (NaN 포함)
+    temp_all = temp.to_frame(name='temperature')
+    temp_all['time_of_day'] = temp_all.index.time
+    temp_all = temp_all.merge(
         hourly_temp_stats,
         left_on='time_of_day',
         right_index=True,
         how='left'
     )
-    temp_with_ctx['upper_3_5sigma'] = (
-        temp_with_ctx['median_temp'] + 3.5 * temp_with_ctx['std_temp']
+    temp_all['upper_3_5sigma'] = (
+        temp_all['median_temp'] + 3.5 * temp_all['std_temp']
     )
-    temp_with_ctx['lower_3_5sigma'] = (
-        temp_with_ctx['median_temp'] - 3.5 * temp_with_ctx['std_temp']
+    temp_all['lower_3_5sigma'] = (
+        temp_all['median_temp'] - 3.5 * temp_all['std_temp']
     )
 
     anomaly_temp_ctx = (
-        (temp_with_ctx['temperature'] > temp_with_ctx['upper_3_5sigma']) |
-        (temp_with_ctx['temperature'] < temp_with_ctx['lower_3_5sigma'])
+        (temp_all['temperature'] > temp_all['upper_3_5sigma']) |
+        (temp_all['temperature'] < temp_all['lower_3_5sigma'])
     ).fillna(False)
 
-    # 습도 문맥
-    hum_with_ctx = hum_nonan.to_frame(name='humidity')
-    hum_with_ctx['time_of_day'] = hum_with_ctx.index.time
-    hum_with_ctx = hum_with_ctx.merge(
+    # 습도도 동일하게
+    hum_all = hum.to_frame(name='humidity')
+    hum_all['time_of_day'] = hum_all.index.time
+    hum_all = hum_all.merge(
         hourly_hum_stats,
         left_on='time_of_day',
         right_index=True,
         how='left'
     )
-    hum_with_ctx['upper_3_5sigma'] = (
-        hum_with_ctx['median_hum'] + 3.5 * hum_with_ctx['std_hum']
+    hum_all['upper_3_5sigma'] = (
+        hum_all['median_hum'] + 3.5 * hum_all['std_hum']
     )
-    hum_with_ctx['lower_3_5sigma'] = (
-        hum_with_ctx['median_hum'] - 3.5 * hum_with_ctx['std_hum']
+    hum_all['lower_3_5sigma'] = (
+        hum_all['median_hum'] - 3.5 * hum_all['std_hum']
     ).clip(lower=0)
 
     anomaly_hum_ctx = (
-        (hum_with_ctx['humidity'] > hum_with_ctx['upper_3_5sigma']) |
-        (hum_with_ctx['humidity'] < hum_with_ctx['lower_3_5sigma'])
+        (hum_all['humidity'] > hum_all['upper_3_5sigma']) |
+        (hum_all['humidity'] < hum_all['lower_3_5sigma'])
     ).fillna(False)
 
-    # 인덱스 재정렬 (full index 기준)
+    # 인덱스 재정렬 (이제 안전함)
     temp_physical_ds = temp_physical.reindex(dataset.index, fill_value=False)
     hum_physical_ds = hum_physical.reindex(dataset.index, fill_value=False)
     cond_temp_diff_ds = cond_temp_diff.reindex(dataset.index, fill_value=False)
@@ -151,10 +150,10 @@ def find_outlier_df(df, temp_index, humi_index, light_index):
         .iloc[:, 1]  # temperature-humidity 상관계수
     )
 
-    # 문맥 통합용 프레임
-    merged_anom = temp_with_ctx[['temperature', 'time_of_day', 'median_temp']].copy()
-    merged_anom['humidity'] = hum_with_ctx['humidity']
-    merged_anom['median_hum'] = hum_with_ctx['median_hum']
+    # 문맥 통합용 프레임 (수정: temp_all, hum_all 사용)
+    merged_anom = temp_all[['temperature', 'time_of_day', 'median_temp']].copy()
+    merged_anom['humidity'] = hum_all['humidity']
+    merged_anom['median_hum'] = hum_all['median_hum']
     merged_anom['anomaly_temp_total'] = all_anom_temp.reindex(merged_anom.index, fill_value=False)
     merged_anom['anomaly_hum_total'] = all_anom_hum.reindex(merged_anom.index, fill_value=False)
     merged_anom = merged_anom.merge(
