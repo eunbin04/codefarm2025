@@ -1,64 +1,30 @@
-# cleandata_train.py
-import schedule
-import threading
+# app_details/cleandata_train.py
 import time
+import streamlit as st
 from outlier_fix.train_models import train_model
-from app_details.utils import get_korea_time
-import json
-import os
+from app_details.cleandata_fixfile import process_table_df
 
-SETTINGS_FILE = "config/settings.json"
 
-def load_auto_train_time():
-    if os.path.exists(SETTINGS_FILE):
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            settings = json.load(f)
-            return settings.get("auto_train_time", "02:00")
-    return "02:00"
+def train_and_fix(df, t_location, h_location, r_location):
+    """
+    1) 선택된 df + 인덱스로 모델 3개 학습
+    2) 같은 df + 인덱스로 이상치 탐지(find_full) + 보정(predict_full)
+    """
+    # 1. 모델 학습
+    with st.spinner("모델 학습 중..."):
+        msg_train = train_model(df, t_location, h_location, r_location)
 
-scheduler_running = False
-scheduler_thread = None
+    # 2. 이상치 탐지 + 보정
+    with st.spinner("이상치 탐지 및 보정 중..."):
+        df_fixed, msg_fix = process_table_df(
+            df,
+            t_location,
+            h_location,
+            r_location
+        )
 
-def job():
-    train_model()
-    with open("outlier_fix/train_log.txt", "a") as f:
-        f.write(f"{get_korea_time().strftime('%Y-%m-%d %H:%M:%S')} (KST)\n")
+    # (선택) 아주 짧은 시간 동안 상태 전환 여유를 줌
+    time.sleep(0.1)
 
-def run_scheduler():
-    global scheduler_running
-    while scheduler_running:
-        schedule.run_pending()
-        time.sleep(1)
-
-def start_scheduler():
-    global scheduler_running, scheduler_thread
-    if scheduler_running:
-        return "이미 자동 실행 중입니다."
-    scheduler_running = True
-    schedule.clear()
-    target_time = load_auto_train_time()
-    t_hour, t_minute = target_time.split(":")
-    schedule.every().day.at(f"{t_hour}:{t_minute}").do(job)
-    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-    scheduler_thread.start()
-    return f"자동 학습이 시작되었습니다! ({target_time}마다 실행)"
-
-def stop_scheduler():
-    global scheduler_running
-    scheduler_running = False
-    schedule.clear()
-    return "자동 학습이 중지되었습니다."
-
-def manual_train():
-    train_model()
-    with open("outlier_fix/train_log.txt", "a") as f:
-        f.write(f"{get_korea_time().strftime('%Y-%m-%d %H:%M:%S')} (KST)\n")
-    return "학습이 완료되었습니다!"
-
-def get_train_log():
-    try:
-        with open("outlier_fix/train_log.txt", "r") as f:
-            logs = f.readlines()
-        return logs[::-1]  # 최신순
-    except FileNotFoundError:
-        return []
+    final_msg = f"{msg_train} / {msg_fix}"
+    return df_fixed, final_msg
