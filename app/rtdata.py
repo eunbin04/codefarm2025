@@ -171,9 +171,9 @@ def show_rtdata():
     st.subheader("📤 과거 데이터 업로드 (초기 학습용)")
 
     st.caption(
-        "이전 기간의 온도/습도/일사량 데이터를 업로드하면 "
-        "sensor_data.db에 병합되어, 이후 하루 1번 자동 학습에 포함됩니다. "
-        "업로드 파일의 열 위치는 settings.json의 t/h/r_location을 따릅니다."
+        "이전 기간의 데이터를 업로드하면, "
+        "현재 수집 데이터에 병합되어 자동 보정값의 정확도가 향상됩니다. "
+        "온도/습도/일사량의 열 위치는 설정의 인덱스를 따릅니다."
     )
 
     upload_col1, upload_col2 = st.columns([2, 1])
