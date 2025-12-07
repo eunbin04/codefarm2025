@@ -35,7 +35,7 @@ def show_perdata():
     # 1단계: 메타데이터에서 타임스탬프 열 확인
     if timestamp_col and timestamp_col in df.columns:
         timestamp_idx = list(df.columns).index(timestamp_col)
-        st.success(f"✅ 타임스탬프 인식 완료: **{timestamp_col}**")
+        st.info(f"타임스탬프: **{timestamp_col}**")
         try:
             df[timestamp_col] = pd.to_datetime(df[timestamp_col], errors='coerce')
             df = df.set_index(timestamp_col)

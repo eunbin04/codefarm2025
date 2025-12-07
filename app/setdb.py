@@ -85,7 +85,7 @@ def show_setdb():
     st.write(tables)
 
     selected_table = st.selectbox(
-        "내용 확인 / 이름 변경 / 삭제할 테이블 선택",
+        "수정 / 삭제할 테이블 선택",
         tables
     )
 
@@ -97,43 +97,67 @@ def show_setdb():
         st.dataframe(db_preview, width='stretch')
         
         if timestamp_info:
-            st.success(f"✅ 타임스탬프 열: **{timestamp_info}**")
+            st.info(f"지정된 타임스탬프: **{timestamp_info}**")
 
     st.markdown("---")
-    st.subheader("✏️ 테이블 이름 변경")
+    col1, col2 = st.columns(2)
 
-    if selected_table:
-        new_name = st.text_input(
-            "새 테이블 이름 입력",
-            value=selected_table,
-            help="공백 / 특수문자는 피하고, 영문/숫자/언더스코어 사용을 권장합니다."
-        )
+    with col1:
+        st.subheader("✏️ 테이블 이름 변경")
+        if selected_table:
+            new_name = st.text_input(
+                "새 테이블 이름 입력",
+                value=selected_table,
+                help="공백 / 특수문자는 피하고, 영문/숫자/언더스코어 사용을 권장합니다."
+            )
+            if st.button("✔️ 이름 저장"):
+                if not new_name.strip():
+                    st.warning("새 테이블 이름을 입력해 주세요.")
+                elif new_name in tables and new_name != selected_table:
+                    st.warning("이미 존재하는 테이블 이름입니다. 다른 이름을 사용해 주세요.")
+                else:
+                    try:
+                        conn = sqlite3.connect(DB_PATH)
+                        cur = conn.cursor()
+                        cur.execute(f"ALTER TABLE [{selected_table}] RENAME TO [{new_name}];")
+                        
+                        # 메타데이터도 함께 업데이트
+                        cur.execute("""
+                            UPDATE table_metadata 
+                            SET table_name = ? 
+                            WHERE table_name = ?
+                        """, (new_name, selected_table))
+                        
+                        conn.commit()
+                        conn.close()
+                        st.success(f"'{selected_table}' → '{new_name}' 으로 이름이 변경되었습니다.")
+                        time.sleep(2)   
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"이름 변경 중 오류가 발생했습니다: {e}")
 
-        if st.button("✔️ 저장"):
-            if not new_name.strip():
-                st.warning("새 테이블 이름을 입력해 주세요.")
-            elif new_name in tables and new_name != selected_table:
-                st.warning("이미 존재하는 테이블 이름입니다. 다른 이름을 사용해 주세요.")
-            else:
-                try:
-                    conn = sqlite3.connect(DB_PATH)
-                    cur = conn.cursor()
-                    cur.execute(f"ALTER TABLE [{selected_table}] RENAME TO [{new_name}];")
-                    
-                    # 메타데이터도 함께 업데이트
-                    cur.execute("""
-                        UPDATE table_metadata 
-                        SET table_name = ? 
-                        WHERE table_name = ?
-                    """, (new_name, selected_table))
-                    
-                    conn.commit()
-                    conn.close()
-                    st.success(f"'{selected_table}' → '{new_name}' 으로 이름이 변경되었습니다.")
-                    time.sleep(2)   
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"이름 변경 중 오류가 발생했습니다: {e}")
+    with col2:
+        st.subheader("⏱ 타임스탬프 열 변경")
+        if selected_table and db_df is not None:
+            cols = db_df.columns.tolist()
+            current_ts = timestamp_info if timestamp_info in cols else cols[0]
+            new_ts = st.selectbox(
+                "타임스탬프 열 선택",
+                options=cols,
+                index=cols.index(current_ts)
+            )
+            if st.button("✔️ 타임스탬프 저장"):
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                cur.execute("""
+                    INSERT OR REPLACE INTO table_metadata (table_name, timestamp_col)
+                    VALUES (?, ?)
+                """, (selected_table, new_ts))
+                conn.commit()
+                conn.close()
+                st.success("타임스탬프 정보가 업데이트되었습니다.")
+                time.sleep(2)
+                st.rerun()
 
     st.markdown("---")
     st.subheader("💣 테이블 삭제")

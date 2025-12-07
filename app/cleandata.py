@@ -25,7 +25,6 @@ def show_cleandata():
         # 🔴 타임스탬프 열 자동 인식
         if timestamp_col and timestamp_col in db_df.columns:
             timestamp_col_idx = list(db_df.columns).index(timestamp_col)
-            st.success(f"✅ 타임스탬프 열 정보: **{timestamp_col}** ")
         else:
             pass
 
@@ -38,7 +37,7 @@ def show_cleandata():
     with col1:
         if timestamp_col_idx is not None:
             st.markdown("<div style='height:0px;'></div>", unsafe_allow_html=True)
-            st.info(f"타임스탬프 인덱스: **{timestamp_col_idx}**")
+            st.info(f"타임스탬프 인덱스: **{timestamp_col}**(**{timestamp_col_idx}**)")
         else:
             ts_input = st.number_input("타임스탬프 인덱스", min_value=0, max_value=col_count-1, value=0)
     
