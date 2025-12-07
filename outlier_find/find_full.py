@@ -11,8 +11,25 @@ warnings.filterwarnings('ignore')
 def robust_mad(x):
     return np.median(np.abs(x - np.median(x)))
 
+def safe_time_extract(idx):
+    """🔴 안전한 시간 추출 (RangeIndex/DatetimeIndex 모두 지원)"""
+    if isinstance(idx, pd.DatetimeIndex):
+        return idx.time
+    else:
+        # RangeIndex → 00:00부터 1분 간격 가상 시간
+        start_time = pd.Timestamp('2025-01-01')
+        fake_times = pd.date_range(start_time, periods=len(idx), freq='1min')
+        return fake_times.time
+
+def safe_hour_extract(idx):
+    """🔴 안전한 시간(시) 추출"""
+    if isinstance(idx, pd.DatetimeIndex):
+        return idx.hour
+    else:
+        return np.arange(len(idx)) % 24  # 0-23 순환
+
 def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=None):
-    """timestamp_index 우선 사용 → 항상 DatetimeIndex 보장"""
+    """timestamp_index 우선 사용 → 항상 안전한 시간 처리"""
     cols = df.columns.tolist()
     temp_col = cols[temp_index]
     humi_col = cols[humi_index]
@@ -20,30 +37,17 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
     
     dataset = df.copy()
     
-    # 🔴 타임스탬프 기반 인덱스 설정 (우선순위: timestamp_index > date_time)
-    is_datetime_index = False
+    # 🔴 타임스탬프 기반 인덱스 설정 (단일 로직)
     if timestamp_index is not None and cols[timestamp_index] in dataset.columns:
         timestamp_col = cols[timestamp_index]
         dataset[timestamp_col] = pd.to_datetime(dataset[timestamp_col], errors='coerce')
-        dataset = dataset.dropna(subset=[timestamp_col])  # 타임스탬프 NaN 제거
+        dataset = dataset.dropna(subset=[timestamp_col])
         dataset = dataset.set_index(timestamp_col).sort_index()
         dataset = dataset[~dataset.index.duplicated(keep='first')]
-        is_datetime_index = True
     elif 'date_time' in dataset.columns:
         dataset['date_time'] = pd.to_datetime(dataset['date_time'], errors='coerce')
         dataset = dataset.dropna(subset=['date_time'])
         dataset = dataset.set_index('date_time').sort_index()
-        dataset = dataset[~dataset.index.duplicated(keep='first')]
-        is_datetime_index = True
-    else:
-        # 최후의 수단: RangeIndex
-        dataset.index = pd.RangeIndex(len(dataset))
-
-    # 1. 인덱스 설정 + 중복 인덱스 정리 (핵심 수정 1)
-    if 'date_time' in dataset.columns:
-        dataset['date_time'] = pd.to_datetime(dataset['date_time'])
-        dataset = dataset.set_index('date_time').sort_index()
-        # 중복 인덱스 제거: 첫 번째 값만 유지
         dataset = dataset[~dataset.index.duplicated(keep='first')]
     else:
         dataset.index = pd.RangeIndex(len(dataset))
@@ -79,21 +83,20 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
     cond_hum_diff = pd.Series(np.abs(z_hum) > Z_THRESH,
                               index=hum.index).fillna(False)
 
-    # (3) 시간대별(시각 기준) 문맥 3.5σ 밴드 (핵심 수정 2)
-    # 시각별 통계 계산
+    # (3) 시간대별(시각 기준) 문맥 3.5σ 밴드 (🔴 안전 수정)
     temp_nonan = temp.dropna()
     hum_nonan = hum.dropna()
     
-    hourly_temp_stats = temp_nonan.groupby(temp_nonan.index.time).agg(
+    hourly_temp_stats = temp_nonan.groupby(safe_time_extract(temp_nonan.index)).agg(
         median_temp='median', std_temp='std'
     )
-    hourly_hum_stats = hum_nonan.groupby(hum_nonan.index.time).agg(
+    hourly_hum_stats = hum_nonan.groupby(safe_time_extract(hum_nonan.index)).agg(
         median_hum='median', std_hum='std'
     )
 
-    # 전체 데이터로 시간대 문맥 계산 (NaN 포함)
+    # 전체 데이터로 시간대 문맥 계산
     temp_all = temp.to_frame(name='temperature')
-    temp_all['time_of_day'] = temp_all.index.time
+    temp_all['time_of_day'] = safe_time_extract(temp_all.index)  # 🔴 안전
     temp_all = temp_all.merge(
         hourly_temp_stats,
         left_on='time_of_day',
@@ -114,7 +117,7 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
 
     # 습도도 동일하게
     hum_all = hum.to_frame(name='humidity')
-    hum_all['time_of_day'] = hum_all.index.time
+    hum_all['time_of_day'] = safe_time_extract(hum_all.index)  # 🔴 안전
     hum_all = hum_all.merge(
         hourly_hum_stats,
         left_on='time_of_day',
@@ -133,7 +136,7 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
         (hum_all['humidity'] < hum_all['lower_3_5sigma'])
     ).fillna(False)
 
-    # 인덱스 재정렬 (이제 안전함)
+    # 인덱스 재정렬
     temp_physical_ds = temp_physical.reindex(dataset.index, fill_value=False)
     hum_physical_ds = hum_physical.reindex(dataset.index, fill_value=False)
     cond_temp_diff_ds = cond_temp_diff.reindex(dataset.index, fill_value=False)
@@ -149,10 +152,10 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
                     cond_hum_diff_ds |
                     anomaly_hum_ctx_ds)
 
-    # (4) 시간대별 온도–습도 상관관계 기반 센서 오류 필터
+    # (4) 시간대별 온도–습도 상관관계 기반 센서 오류 필터 (🔴 안전 수정)
     combined = dataset[[temp_col, humi_col]].copy()
     combined.columns = ['temperature', 'humidity']
-    combined['time_of_day'] = combined.index.time
+    combined['time_of_day'] = safe_time_extract(combined.index)  # 🔴 안전
 
     hourly_corr = (
         combined
@@ -160,10 +163,9 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
         .groupby('time_of_day')[['temperature', 'humidity']]
         .corr()
         .unstack()
-        .iloc[:, 1]  # temperature-humidity 상관계수
+        .iloc[:, 1]
     )
 
-    # 문맥 통합용 프레임 (수정: temp_all, hum_all 사용)
     merged_anom = temp_all[['temperature', 'time_of_day', 'median_temp']].copy()
     merged_anom['humidity'] = hum_all['humidity']
     merged_anom['median_hum'] = hum_all['median_hum']
@@ -187,30 +189,25 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
         if pd.isna(corr_val):
             continue
 
-        # Case A: 한쪽만 이상 + 상관관계 강함 → 센서오류 의심
         if (is_temp_anom != is_hum_anom) and (abs(corr_val) > STRONG_CORR_TH):
             merged_anom.at[idx, 'sensor_error_candidate'] = True
-
-        # Case B: 둘 다 이상인데 상관 방향과 dev 방향 불일치 → 센서오류
         elif is_temp_anom and is_hum_anom:
             temp_dev = row['temperature'] - row['median_temp']
             hum_dev = row['humidity'] - row['median_hum']
             is_consistent = False
 
-            if corr_val < -STRONG_CORR_TH:  # 음의 상관: 서로 반대여야 정상
+            if corr_val < -STRONG_CORR_TH:
                 if (temp_dev * hum_dev) < 0:
                     is_consistent = True
-            elif corr_val > STRONG_CORR_TH:  # 양의 상관: 같이 움직여야 정상
+            elif corr_val > STRONG_CORR_TH:
                 if (temp_dev * hum_dev) > 0:
                     is_consistent = True
             else:
-                # 상관 약하면 환경 변화로 간주
                 is_consistent = True
 
             if not is_consistent:
                 merged_anom.at[idx, 'sensor_error_candidate'] = True
 
-    # 최종 센서 오류 후보 마스크 (원 인덱스로 확장)
     sensor_err_temp = all_anom_temp & merged_anom['sensor_error_candidate'].reindex(
         all_anom_temp.index, fill_value=False
     )
@@ -222,15 +219,22 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
     hum_fault = sensor_err_hum.fillna(False)
 
     # ============================================================
-    # B. 조도(PPFD) 이상치 탐지
+    # B. 조도(PPFD) 이상치 탐지 (🔴 안전 수정)
     # ============================================================
 
-    # 조도 값이 이미 PPFD 단위라고 가정
     ld = light
 
     # weather_state 생성
     if 'weather_state' not in dataset.columns:
-        daily = ld.resample('D').agg(['max', 'mean', 'std', 'median']).dropna()
+        if isinstance(dataset.index, pd.DatetimeIndex):
+            daily = ld.resample('D').agg(['max', 'mean', 'std', 'median']).dropna()
+        else:
+            # RangeIndex용 가상 날짜
+            fake_dates = pd.date_range('2025-01-01', periods=len(ld), freq='1min')
+            ld_fake = ld.copy()
+            ld_fake.index = fake_dates
+            daily = ld_fake.resample('D').agg(['max', 'mean', 'std', 'median']).dropna()
+        
         if len(daily) >= 3:
             scaler = StandardScaler()
             df_s = scaler.fit_transform(daily)
@@ -245,6 +249,7 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
             daily['weather_state'] = daily['cluster'].map(mapping)
         else:
             daily['weather_state'] = 'clear'
+        
         dataset['weather_state'] = daily['weather_state'].reindex(dataset.index, method='ffill')
 
     # robust 통계용 설정
@@ -258,7 +263,6 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
     CLOUD_RECOVER_PERC = 0.3
     CLOUD_RECOVER_WINDOW = 10
 
-    # light_ctx: hour × weather_state 통계 계산
     light_ctx = (
         dataset[[light_col, 'weather_state']]
         .dropna()
@@ -267,7 +271,7 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
 
     hourly_stats = (
         light_ctx
-        .groupby([light_ctx.index.hour.rename('hour'), 'weather_state'])
+        .groupby([pd.Series(safe_hour_extract(light_ctx.index), index=light_ctx.index).rename('hour'), 'weather_state'])  # 🔴 안전
         .agg(
             median_hour=('light', 'median'),
             mad_hour=('light', robust_mad),
@@ -285,9 +289,8 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
         .copy()
         .rename(columns={light_col: 'light'})
     )
-    full['hour'] = full.index.hour
+    full['hour'] = safe_hour_extract(full.index)  # 🔴 안전
 
-    # 인덱스 이름
     idx_name = dataset.index.name if dataset.index.name is not None else 'index'
     full = (
         full
@@ -296,15 +299,12 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
         .set_index(idx_name)
     )
 
-    # 원 조도 다시 매핑
     full['light'] = ld.reindex(full.index)
 
-    # 물리 범위
     LIGHT_PPFD_MIN = 0.0
     LIGHT_PPFD_MAX = 3000.0
     mask_physical = (full['light'] < LIGHT_PPFD_MIN) | (full['light'] > LIGHT_PPFD_MAX)
 
-    # IQR 기반
     iqr = (full['p75_hour'] - full['p25_hour']).abs()
     lower_bound = full['median_hour'] - IQR_LOWER_K * iqr
     upper_bound = full['median_hour'] + IQR_UPPER_K * iqr
@@ -312,20 +312,16 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
     mask_iqr_upper = full['light'] > upper_bound
     mask_iqr = (mask_iqr_lower | mask_iqr_upper).fillna(False)
 
-    # MAD extreme
     mad = full['mad_hour'].replace(0, np.nan)
     robust_z = (full['light'] - full['median_hour']).abs() / (mad + 1e-9)
     mask_mad_extreme = robust_z > MAD_Z_UPPER
 
-    # 낮 시간대 매우 낮은 값
-    is_day = (full.index.hour >= 9) & (full.index.hour <= 16)
+    is_day = (full['hour'] >= 9) & (full['hour'] <= 16)  # 🔴 안전
     mask_day_low = (full['light'] < full['q01_hour']) & is_day
 
-    # 급격 스파이크
     diff_light = full['light'].diff().fillna(0)
     mask_spike = (diff_light.abs() > 400)
 
-    # 구름 패턴 (급락 후 일정 시간 내 회복)
     prev = full['light'].shift(1)
     drop_mask = (full['light'] <= prev * (1 - CLOUD_DROP_PERC))
     recovery_mask = pd.Series(False, index=full.index)
@@ -337,23 +333,20 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
                     recovery_mask.iat[i] = True
     mask_cloud = (drop_mask & recovery_mask).fillna(False)
 
-    # 후보 집계
     candidate = (mask_physical |
                  mask_iqr |
                  mask_mad_extreme |
                  mask_spike |
                  mask_day_low)
 
-    # 지속성 필터(persistence)
     cand_int = candidate.astype(int)
     groups = (cand_int != cand_int.shift(1)).cumsum()
     seg_len = cand_int.groupby(groups).transform('sum')
     min_len_samples = max(1, int(MIN_DURATION_MINUTES / SAMPLE_MINUTES))
     persistent = (cand_int == 1) & (seg_len >= min_len_samples)
 
-    # 환경 마스크
     context_normal = (~mask_iqr) & (~mask_mad_extreme)
-    night_mask = (full.index.hour >= 18) | (full.index.hour <= 6)
+    night_mask = (full['hour'] >= 18) | (full['hour'] <= 6)  # 🔴 안전
     night_normal = (full['light'] <= 50) & night_mask
     environment_mask = context_normal | night_normal | mask_cloud
 
@@ -368,10 +361,8 @@ def find_outlier_df(df, temp_index, humi_index, light_index, timestamp_index=Non
     dataset.loc[hum_fault.values, humi_col] = np.nan
     dataset.loc[light_fault.values, light_col] = np.nan
 
-    # 보조 컬럼 정리: weather_state 제거
     if 'weather_state' in dataset.columns:
         dataset = dataset.drop(columns=['weather_state'])
 
-    # 인덱스 복구
     dataset = dataset.reset_index()
     return dataset
