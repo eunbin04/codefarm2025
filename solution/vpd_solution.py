@@ -3,15 +3,9 @@ import pandas as pd
 import numpy as np
 import requests
 
-try:
-    from google.colab import drive  # type: ignore
-    drive.mount('/content/drive')
-except Exception:
-    print("[INFO] Colab 환경이 아니므로 drive.mount 생략")
-
 # ---------------- 기본 설정 ----------------
 STATION_DIR = "data/station_code.csv"
-GROWTH_CSV_PATH = "data/mc_3m.csv"
+GROWTH_CSV_PATH = "data/mc.csv"
 
 ASOS_URL = "http://apis.data.go.kr/1360000/AsosHourlyInfoService/getWthrDataList"
 SERVICE_KEY = "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9"
