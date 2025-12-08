@@ -9,7 +9,7 @@ from app.perdata import show_perdata
 from app.rtdata import show_rtdata
 from app.alarms import show_alarms
 from app.settings import show_settings
-from auth import authenticate, load_users
+from app_details.auth import authenticate, load_users
 import time
 
 # 로그인 세션 관리
