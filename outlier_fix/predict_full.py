@@ -233,5 +233,5 @@ def correct_outlier_df(df, temp_index, humi_index, light_index):
     drop_cols = [c for c in drop_cols if c in df_copy.columns]
     df_copy = df_copy.drop(columns=drop_cols)
 
-    msg = "이상치 및 결측치 보정 완료" if changes_made else "보정 사항 없음"
+    msg = "이상치 및 결측치 보정 완료"
     return df_copy, msg
