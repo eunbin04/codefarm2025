@@ -24,7 +24,7 @@ def show_cleandata():
     if selected_table:
         db_df, db_preview, timestamp_col = export_table_to_df(selected_table)
         st.write("선택한 데이터 미리보기")
-        st.dataframe(db_preview, use_container_width=True)
+        st.dataframe(db_preview, width='stretch')
 
         if timestamp_col and timestamp_col in db_df.columns:
             timestamp_col_idx = list(db_df.columns).index(timestamp_col)
@@ -154,7 +154,7 @@ def show_cleandata():
                         x=1,
                     ),
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
             plot_compare(t_col, "온도")
             plot_compare(h_col, "습도")
