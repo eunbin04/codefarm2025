@@ -43,6 +43,16 @@ def _safe_hour(idx):
     else:
         return np.arange(len(idx)) % 24
 
+# 디버깅
+def find_outliers_and_mark(df: pd.DataFrame, datetime_col: str = "time_str"):
+    print("[DEBUG] find_outliers_and_mark version check")
+    print("[DEBUG] first 5 lines around (5) block just to confirm")
+    print(
+        "# (5) 온도/습도 상관관계 기반 필터링\n"
+        "combined = pd.DataFrame(...)\n"
+        "combined = combined.dropna(...)\n"
+        "hourly_corr = (combined.groupby(...).corr()...)\n"
+    )
 
 def find_outliers_and_mark(df: pd.DataFrame, datetime_col: str = "time_str"):
     # ============================

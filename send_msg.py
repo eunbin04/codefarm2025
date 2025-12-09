@@ -9,6 +9,7 @@ import qrcode
 import threading
 from datetime import datetime, timedelta
 import numpy as np
+import pytz  # ✅ 한국 시간 사용
 
 TOKEN = "8363279994:AAHVMfjy7wxG_FmtTemoAoaXLgpWvKYtCj8"
 DB_PATH = "alarms.db"
@@ -19,6 +20,8 @@ SETTINGS_FILE = "config/settings.json"
 BASE_URL = f"https://api.telegram.org/bot{TOKEN}"
 offset = None
 
+KST = pytz.timezone("Asia/Seoul")  # ✅ 한국 시간대
+
 # ============================================================
 # 📌 settings.json 로드
 # ============================================================
@@ -26,13 +29,13 @@ def load_settings():
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    # 기본값
     return {
         "farm_name": "농가",
         "daily_stat_time": "08:24",
         "t_location": 3,
         "h_location": 2,
         "r_location": 4,
+        "vpd_alert_interval_min": 10,
     }
 
 # ============================================================
@@ -93,7 +96,7 @@ def send_message(chat_id, text, add_keyboard=False):
         payload["reply_markup"] = {
             "keyboard": [[{"text": "실시간"}]],
             "resize_keyboard": True,
-            "one_time_keyboard": False
+            "one_time_keyboard": False,
         }
 
     requests.post(url, json=payload)
@@ -133,36 +136,61 @@ def get_latest_sensor_data():
     conn.close()
 
     if not row:
-        return "<b>📡 센서 데이터 없음</b>"
+        return "<b>📡 실시간 센서 데이터 없음</b>"
 
     keys = ["id", "time_str", "humidity", "temperature", "irradiance", "server_sent"]
     data = dict(zip(keys, row))
 
-    col_width = max(len(k) for k in data)
-    block = "".join(f"{k.ljust(col_width)} : {v}\n" for k, v in data.items())
-
-    return "<b>📡 최신 센서 데이터</b>\n<pre>" + block + "</pre>"
+    text = (
+        "<b>📡 실시간 센서 데이터</b>\n"
+        "━━━━━━━━━━━\n"
+        f"⏱ 시각 : {data['time_str']}\n"
+        f"🌡 온도 : {data['temperature']} °C\n"
+        f"💧 습도 : {data['humidity']} %\n"
+        f"☀️ 일사 : {data['irradiance']} W/m²\n"
+    )
+    return text
 
 # ============================================================
-# 📌 새로운 알람 감지 (alarms) → 그룹 전송
+# 📌 새로운 알람 감지 (alarms) → 카드 스타일 포맷
 # ============================================================
 def get_alarm_group_by_created_at(created_at):
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query(
-        "SELECT * FROM alarms WHERE created_at = ? ORDER BY id;",
+        "SELECT time_str, alarm_type, value, status FROM alarms WHERE created_at = ? ORDER BY id;",
         conn,
-        params=[created_at]
+        params=[created_at],
     )
     conn.close()
 
-    blocks = []
-    for _, row in df.iterrows():
-        rd = row.to_dict()
-        w = max(len(k) for k in rd)
-        block = "".join(f"{k.ljust(w)} : {v}\n" for k, v in rd.items())
-        blocks.append(f"<pre>{block}</pre>")
+    if df.empty:
+        return "<b>🚨 이상치/결측 알림</b>\n(해당 시각 알림 없음)"
 
-    return "<b>🚨 결측치 or 이상치 발생</b>\n" + "\n".join(blocks)
+    time_str = str(df["time_str"].iloc[0])
+
+    lines = [
+        "<b>🚨 센서 이상치·결측 발생</b>",
+        "━━━━━━━━━━━",
+        f"⏱ 시각 : {time_str}",
+        "",
+        "<b>세부 내역</b>",
+    ]
+
+    for _, row in df.iterrows():
+        atype = row["alarm_type"]
+        status = row["status"]
+        val = row["value"]
+
+        if status == "결측치":
+            lines.append(f"• {atype} ➜ <b>결측치</b> (값 없음)")
+        else:
+            if pd.isna(val):
+                val_str = "값 없음"
+            else:
+                val_str = f"{float(val):.2f}"
+            lines.append(f"• {atype} ➜ {val_str} (<b>{status}</b>)")
+
+    return "\n".join(lines)
 
 def watch_db_changes():
     last_id = None
@@ -170,7 +198,9 @@ def watch_db_changes():
     while True:
         try:
             conn = sqlite3.connect(DB_PATH)
-            df = pd.read_sql_query("SELECT id, created_at FROM alarms ORDER BY id DESC LIMIT 1;", conn)
+            df = pd.read_sql_query(
+                "SELECT id, created_at FROM alarms ORDER BY id DESC LIMIT 1;", conn
+            )
             conn.close()
 
             if len(df) == 0:
@@ -193,28 +223,47 @@ def watch_db_changes():
         time.sleep(1)
 
 # ============================================================
-# 📌 VPD 솔루션 알림 감지 (vpd_alarms)
+# 📌 VPD 솔루션 알림 감지 (vpd_alarms) + 쿨타임
 # ============================================================
 def get_vpd_alarm_group_by_created_at(created_at):
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query(
-        "SELECT * FROM vpd_alarms WHERE created_at = ? ORDER BY id;",
+        """
+        SELECT time_str, vpd, temperature, humidity, solution_summary
+        FROM vpd_alarms
+        WHERE created_at = ?
+        ORDER BY id;
+        """,
         conn,
-        params=[created_at]
+        params=[created_at],
     )
     conn.close()
 
     if df.empty:
-        return "<b>💦 VPD 솔루션 생성</b>\n(해당 시각의 레코드 없음)"
+        return "<b>💦 VPD 솔루션 알림</b>\n(해당 시각의 레코드 없음)"
 
-    blocks = []
-    for _, row in df.iterrows():
-        rd = row.to_dict()
-        w = max(len(k) for k in rd)
-        block = "".join(f"{k.ljust(w)} : {v}\n" for k, v in rd.items())
-        blocks.append(f"<pre>{block}</pre>")
+    row = df.iloc[0]
+    time_str = row["time_str"]
+    vpd = row["vpd"]
+    T = row["temperature"]
+    H = row["humidity"]
+    summary = row["solution_summary"]
 
-    return "<b>💦 VPD 솔루션 생성</b>\n" + "\n".join(blocks)
+    if pd.isna(vpd) or pd.isna(T) or pd.isna(H):
+        state_line = "현재 상태 정보 부족 (T/RH/VPD 일부 누락)"
+    else:
+        state_line = f"T={T:.1f}°C, RH={H:.1f}%, VPD={vpd:.2f} kPa"
+
+    lines = [
+        "<b>💦 VPD 제어 솔루션 생성</b>",
+        "━━━━━━━━━━━",
+        f"⏱ 시각 : {time_str}",
+        f"🔎 현재 상태 : {state_line}",
+        "",
+        "<b>추천 전략 요약</b>",
+        f"{summary}",
+    ]
+    return "\n".join(lines)
 
 def watch_vpd_db_changes():
     last_id = None
@@ -247,8 +296,9 @@ def watch_vpd_db_changes():
 
         time.sleep(1)
 
+
 # ============================================================
-# 📌 하루 통계 요약 텍스트 생성 (perdata_report 요약 버전)
+# 📌 하루 통계 요약 텍스트 생성 (오늘 00시~현재, KST 기준)
 # ============================================================
 def count_anomalies(series: pd.Series) -> int:
     if len(series) < 4:
@@ -261,14 +311,17 @@ def count_anomalies(series: pd.Series) -> int:
     anomalies = ((series < lower) | (series > upper)).sum()
     return int(anomalies)
 
-def generate_daily_summary_text(target_date: datetime, settings: dict) -> str:
+def generate_daily_summary_text(now_kst: datetime, settings: dict) -> str:
     """
-    sensor_data.db의 measurements에서 target_date 하루치 데이터 가져와서
-    온도/습도/일사에 대한 간단한 통계 요약 텍스트 생성.
+    한국 시간(now_kst)을 기준으로
+    오늘 00:00:00 ~ now_kst 까지의 데이터를 요약.
     """
-    date_str = target_date.strftime("%Y-%m-%d")
+    date_str = now_kst.strftime("%Y-%m-%d")
     start_ts = f"{date_str} 00:00:00"
-    end_ts = f"{date_str} 23:59:59"
+    end_ts = now_kst.strftime("%Y-%m-%d %H:%M:%S")
+
+    print("[DAILY] now(KST):", now_kst)
+    print("[DAILY] range:", start_ts, " ~ ", end_ts)
 
     conn = sqlite3.connect(SENSOR_DB)
     query = """
@@ -280,10 +333,13 @@ def generate_daily_summary_text(target_date: datetime, settings: dict) -> str:
     df = pd.read_sql_query(query, conn, params=[start_ts, end_ts])
     conn.close()
 
+    print("[DAILY] rows:", len(df))
+    if not df.empty:
+        print("[DAILY] min/max:", df["time_str"].min(), df["time_str"].max())
+
     if df.empty:
         return f"<b>📊 {date_str} 일일 요약</b>\n해당 날짜에 수집된 데이터가 없습니다."
 
-    # 숫자형 변환
     for col in ["temperature", "humidity", "irradiance"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
@@ -291,20 +347,22 @@ def generate_daily_summary_text(target_date: datetime, settings: dict) -> str:
     if df.empty:
         return f"<b>📊 {date_str} 일일 요약</b>\n모든 센서 값이 NaN입니다."
 
-    lines = []
-    lines.append(f"<b>📊 {date_str} 일일 센서 요약</b>")
+    lines = [
+        f"<b>📊 {date_str} 일일 센서 요약</b>",
+        "━━━━━━━━━━━",
+        f"(기준: {start_ts} ~ {end_ts} / KST)",
+    ]
 
-    # 센서별 요약
     sensors = {
-        "온도(°C)": "temperature",
-        "습도(%)": "humidity",
-        "일사(W/m²)": "irradiance",
+        "🌡 온도(°C)": "temperature",
+        "💧 습도(%)": "humidity",
+        "☀️ 일사(W/m²)": "irradiance",
     }
 
     for name_kr, col in sensors.items():
         series = df[col].dropna()
         if series.empty:
-            lines.append(f"\n{name_kr}: 데이터 없음")
+            lines.append(f"\n{name_kr}\n • 데이터 없음")
             continue
 
         mean = series.mean()
@@ -323,7 +381,7 @@ def generate_daily_summary_text(target_date: datetime, settings: dict) -> str:
     return "\n".join(lines)
 
 # ============================================================
-# 📌 daily_stat_time에 맞춰 하루 한 번 요약 전송
+# 📌 daily_stat_time(KST)에 맞춰 하루 한 번 요약 전송
 # ============================================================
 def daily_stats_scheduler():
     settings = load_settings()
@@ -338,18 +396,16 @@ def daily_stats_scheduler():
     last_sent_date = None
 
     while True:
-        now = datetime.now()
-        today = now.date()
+        now_kst = datetime.now(KST)
+        today = now_kst.date()
 
-        # 아직 오늘은 안 보냈고, 설정된 시간 이후라면 전날 기준 통계 보내기
         if (last_sent_date != today) and (
-            (now.hour > daily_hour) or (now.hour == daily_hour and now.minute >= daily_minute)
+            (now_kst.hour > daily_hour) or (now_kst.hour == daily_hour and now_kst.minute >= daily_minute)
         ):
-            target_date = today - timedelta(days=1)  # 전날 기준
-            text = generate_daily_summary_text(target_date, settings)
+            text = generate_daily_summary_text(now_kst, settings)
             header = f"<b>🏡 {farm_name} 일일 리포트</b>\n\n"
             broadcast(header + text)
-            print(f"[DailyStats] {target_date.strftime('%Y-%m-%d')} 요약 전송 완료")
+            print(f"[DailyStats] {today.strftime('%Y-%m-%d')} 요약 전송 완료")
             last_sent_date = today
 
         time.sleep(30)
@@ -380,7 +436,7 @@ def telegram_listener():
                 save_chat_id(chat_id)
                 send_message(
                     chat_id,
-                    "환영합니다! '실시간'을 누르면 최신 센서 데이터를 볼 수 있습니다.",
+                    "환영합니다! 아래 버튼에서 '실시간'을 누르면 최신 센서 데이터를 볼 수 있습니다.",
                     add_keyboard=True,
                 )
 
