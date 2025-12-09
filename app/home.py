@@ -43,7 +43,7 @@ def show_home():
     )
 
 
-    farm = st.session_state.get("farm_name", "CODEFARM 온실")
+    farm = st.session_state.get("farm_name", "코드팜 토마토 온실")
 
     st.title(f"{farm}")
 
@@ -68,36 +68,40 @@ def show_home():
     st.markdown("---")
     st.subheader("주요 기능")
 
+    # home.py 안의 주요 기능 버튼 부분 수정
+
     st.markdown("##### 데이터 조회 및 분석")
     col1, col2, col3 = st.columns(3)
 
     with col1:
         if st.button("🌿 실시간 데이터"):
-            st.session_state['page'] = 'nowdata'
+            st.session_state['page'] = '실시간 데이터'
 
     with col2:
         if st.button("📅 기간별 분석"):
-            st.session_state['page'] = 'perdata'
+            st.session_state['page'] = '기간별 데이터'
 
     with col3:
         if st.button("🛠️ 데이터 보정"):
-            st.session_state['page'] = 'cleandata'
-
+            st.session_state['page'] = '데이터 보정'
 
     st.markdown("##### 관리 기능")
     col4, col5, col6 = st.columns(3)
 
     with col4:
         if st.button("🚨 알림 기록"):
-            st.session_state['page'] = 'alarms'
+            st.session_state['page'] = '알림 기록'
 
     with col5:
         if st.button("⛅ 기상 정보"):
-            st.session_state['page'] = 'weather'
+            st.session_state['page'] = '기상 정보'
 
     with col6:
         if st.button("⚙️ 설정 페이지"):
-            st.session_state['page'] = 'settings'
+            st.session_state['page'] = '설정'
 
+    st.divider()
+    st.subheader("알림봇")
+    st.image("data/bot_qr.png", caption="텔레그램 sfdesign2025", width=300)
 
-    st.markdown("---")
+    # st.info("카메라를 이용하실 수 없다면 텔레그램에 'sfdesign2025_bot'을 추가하시고, '/start'를 입력하시면 서비스를 이용하실 수 있습니다.")
