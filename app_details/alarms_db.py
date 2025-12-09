@@ -1,4 +1,3 @@
-# app_details/alarms_db.py
 import pandas as pd
 import sqlite3
 import json
@@ -28,23 +27,23 @@ def initialize_alarms_db():
     conn = sqlite3.connect(ALARMS_DB_PATH)
     cursor = conn.cursor()
 
-    # 알림 테이블: 6개 핵심 항목만 실제로 사용
+    # 이상치/결측 알림 테이블
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS alarms (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            time_str TEXT,             -- 수집일(문자열)
-            alarm_type TEXT,           -- '온도','습도','광'
-            value REAL,                -- 실제 값
-            status TEXT,               -- '이상치','결측치' 등
-            correction_status TEXT,    -- '자동 보정 (시각)', '수동 보정 (시각)'
-            correction_value REAL,     -- 보정값
+            time_str TEXT,
+            alarm_type TEXT,
+            value REAL,
+            status TEXT,
+            correction_status TEXT,
+            correction_value REAL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
 
-    # 보정된 센서 데이터 (현재 화면에선 사용 안 하지만 구조 유지)
+    # 보정된 센서 데이터
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS corrected_sensor (
@@ -65,6 +64,22 @@ def initialize_alarms_db():
         CREATE TABLE IF NOT EXISTS runner_state (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             last_processed_measurement_id INTEGER
+        )
+        """
+    )
+
+    # VPD 솔루션 알림 테이블
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS vpd_alarms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            time_str TEXT,
+            vpd REAL,
+            temperature REAL,
+            humidity REAL,
+            solution_summary TEXT,
+            solution_detail TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
@@ -98,7 +113,7 @@ def save_last_processed_measurement_id(last_id: int):
 
 
 def load_alarm_data_from_db():
-    """알림 목록 화면용 데이터 로드 (6개 항목만 반환)"""
+    """이상치/결측 알림 목록 로드"""
     try:
         conn = sqlite3.connect(ALARMS_DB_PATH)
         query = """
@@ -153,7 +168,7 @@ def load_alarm_data_from_db():
 
 
 def save_alarm_to_db(alarm_data: dict):
-    """단일 알림 저장 (센서별 행 1개씩)"""
+    """단일 이상치/결측 알림 저장"""
     try:
         conn = sqlite3.connect(ALARMS_DB_PATH)
         cursor = conn.cursor()
@@ -185,14 +200,14 @@ def save_alarm_to_db(alarm_data: dict):
 
 
 def insert_alarm_rows(alarm_df: pd.DataFrame):
-    """find_outliers_and_mark에서 만든 alarm_df(센서별 행)를 그대로 저장"""
+    """find_outliers_and_mark에서 만든 alarm_df 저장"""
     for _, row in alarm_df.iterrows():
         save_alarm_to_db(
             {
                 "time_str": row["time_str"],
                 "alarm_type": row["alarm_type"],
                 "value": row["value"],
-                "status": row["status"],        # '이상치' / '결측치'
+                "status": row["status"],
                 "correction_status": "",
                 "correction_value": None,
             }
@@ -204,9 +219,9 @@ def update_alarm_correction_with_value(
     alarm_type: str,
     correction_status: str,
     correction_value: float,
-    correction_detail: str,  # 현재 컬럼에서는 correction_detail을 저장하지 않지만, 시그니처 유지
+    correction_detail: str,
 ):
-    """자동/수동 보정 후 보정내역/보정값 업데이트"""
+    """보정내역/보정값 업데이트"""
     try:
         conn = sqlite3.connect(ALARMS_DB_PATH)
         cursor = conn.cursor()
@@ -265,7 +280,99 @@ def save_corrected_sensor_data(corrected_df: pd.DataFrame, settings=None):
 
 
 def color_status(val, correction):
-    # 상태/보정내역에 따라 색 지정
     if correction and correction != "":
         return "background-color: lightgreen;"
     return "background-color: lightcoral;"
+
+
+# =========== VPD 솔루션용 함수 ===========
+
+
+def save_vpd_solution_alarm(
+    time_str: str,
+    vpd: float,
+    temperature: float,
+    humidity: float,
+    solution_summary: str,
+    solution_detail: dict,
+):
+    """VPD 솔루션 발생 시 vpd_alarms에 저장"""
+    try:
+        conn = sqlite3.connect(ALARMS_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO vpd_alarms
+            (time_str, vpd, temperature, humidity, solution_summary, solution_detail)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                time_str,
+                float(vpd) if vpd is not None else None,
+                float(temperature) if temperature is not None else None,
+                float(humidity) if humidity is not None else None,
+                solution_summary,
+                json.dumps(solution_detail, ensure_ascii=False),
+            ),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"VPD 솔루션 알림 저장 중 오류 발생: {e}")
+        return False
+
+
+def load_vpd_solution_alarms(limit: int = 200) -> pd.DataFrame:
+    """VPD 솔루션 알림 목록 로드"""
+    try:
+        conn = sqlite3.connect(ALARMS_DB_PATH)
+        query = """
+            SELECT
+                time_str,
+                vpd,
+                temperature,
+                humidity,
+                solution_summary,
+                solution_detail
+            FROM vpd_alarms
+            ORDER BY created_at DESC
+            LIMIT ?
+        """
+        df = pd.read_sql(query, conn, params=(limit,))
+        conn.close()
+
+        if df.empty:
+            return pd.DataFrame(
+                columns=[
+                    "시간",
+                    "VPD",
+                    "온도",
+                    "습도",
+                    "전략",
+                    "상세",
+                ]
+            )
+
+        df.columns = [
+            "시간",
+            "VPD",
+            "온도",
+            "습도",
+            "전략",
+            "상세",
+        ]
+        return df
+
+    except Exception as e:
+        st.error(f"VPD 솔루션 데이터 로드 중 오류 발생: {e}")
+        return pd.DataFrame(
+            columns=[
+                "시간",
+                "VPD",
+                "온도",
+                "습도",
+                "전략",
+                "상세",
+            ]
+        )

@@ -5,5 +5,12 @@
     "auto_train_time": "17:15",
     "t_location": 3,
     "h_location": 2,
-    "r_location": 4
+    "r_location": 4,
+    "region": "전북특별자치도",
+    "station_name": "전주",
+    "station_id": 146,
+    "facility_key": "glass_venlo",
+    "cover_type": "film_PE",
+    "vent_angle_deg": 30.0,
+    "gh_height": 4.5
 }

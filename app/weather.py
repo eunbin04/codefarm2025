@@ -3,9 +3,22 @@ import streamlit as st
 import math
 import requests
 import pandas as pd
+import json
 from datetime import timedelta
 from app_details.utils import get_korea_time
-from app_details.weather_loc import load_station_table, get_region_options, get_office_options, get_station_options, get_default_values, get_lat_lon
+from app_details.weather_loc import get_lat_lon  # 지점명 -> 위경도
+
+
+SETTINGS_PATH = "config/settings.json"
+
+
+def load_settings(path: str = SETTINGS_PATH) -> dict:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
 
 def latlon_to_xy(lat, lon):
     RE = 6371.00877
@@ -54,54 +67,31 @@ def deg_to_dir(deg):
         "북", "북북동", "북동", "동북동", "동",
         "동남동", "남동", "남남동", "남",
         "남남서", "남서", "서남서", "서",
-        "서북서", "북서", "북북서"
+        "서북서", "북서", "북북서",
     ]
     idx = int((deg + 11.25) // 22.5) % 16
     return dirs[idx]
-
 
 
 def show_weather():
     st.title("⛅ 기상 정보")
     st.markdown("---")
 
-    # ===== 지점 선택 UI 추가 (기존 디자인 위에) =====
-    df_station = load_station_table()
-    defaults = get_default_values(df_station)
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        selected_region = st.selectbox(
-            "지역", 
-            options=get_region_options(df_station),
-            index=defaults["region_idx"],
-            key="weather_region"
-        )
-    with col2:
-        office_options = get_office_options(df_station, selected_region)
-        selected_office = st.selectbox(
-            "관리관서",
-            options=office_options,
-            index=0,
-            key="weather_office"
-        )
-    with col3:
-        station_options = get_station_options(df_station, selected_region, selected_office)
-        selected_station = st.selectbox(
-            "지점명",
-            options=station_options,
-            index=0,
-            key="weather_station"
-        )
-    
-    # 선택된 지점의 위경도 자동 세팅
-    LAT, LON = get_lat_lon(selected_station)
-    st.caption(f"📍위도: {LAT:.4f}, 경도: {LON:.4f}")
+    # 설정에서 지점명/지역 불러오기
+    settings = load_settings()
+    region = settings.get("region", "")
+    station_name = settings.get("station_name", "")
+
+    # 지점명만 info로 표시
+    st.info(f"지역: **{region} {station_name}**")
+
+    # 지점명 -> 위도/경도
+    LAT, LON = get_lat_lon(station_name)
+    st.caption(f"📍 위도: {LAT:.4f}, 경도: {LON:.4f}")
 
     SERVICE_KEY = "2403d03559e40daeeab89694df60abdabbf06848fe92122ee964798ceb14b6a9"
 
     nx, ny = latlon_to_xy(LAT, LON)
-    # st.write(f"좌표: ({nx}, {ny})")
 
     # 발표 기준시각 (오늘, 40분 전 정시 기준)
     korea_now = get_korea_time()
@@ -129,7 +119,7 @@ def show_weather():
         items = data["response"]["body"]["items"]["item"]
         df = pd.DataFrame(items)
         if df.empty:
-            st.info('기상청에서 응답은 있지만, 데이터가 없습니다.')
+            st.info("기상청에서 응답은 있지만, 데이터가 없습니다.")
             return
     except Exception as e:
         st.error(f"기상청 API 데이터 조회 실패: {e}")
@@ -139,7 +129,7 @@ def show_weather():
     df_pivot = df.pivot(
         index=["baseDate", "baseTime", "nx", "ny"],
         columns="category",
-        values="obsrValue"
+        values="obsrValue",
     ).reset_index()
     df_pivot["datetime"] = pd.to_datetime(
         df_pivot["baseDate"] + df_pivot["baseTime"], format="%Y%m%d%H%M"
@@ -149,7 +139,7 @@ def show_weather():
     def to_float(val):
         try:
             return float(val)
-        except:
+        except Exception:
             return None
 
     t1h = to_float(latest.get("T1H"))
@@ -164,7 +154,7 @@ def show_weather():
     wind_dir = deg_to_dir(vec)
     dt_str = latest["datetime"].strftime("%Y-%m-%d %H:%M")
 
-    # 요약 출력 (기존 디자인 100% 그대로)
+    # 요약 출력 (기존 디자인 그대로)
     def summary(dt_str, t1h, reh, pty_desc, rn1, wsd, wind_dir, vec):
         st.subheader("실시간 요약")
         col1, col2, col3 = st.columns(3)
@@ -177,7 +167,9 @@ def show_weather():
                     <div>기온</div>
                     <div style="font-weight:bold; font-size:18px;">{t1h}℃</div>
                 </div>
-                """, unsafe_allow_html=True)
+                """,
+                unsafe_allow_html=True,
+            )
 
         with col2:
             st.markdown(
@@ -187,7 +179,9 @@ def show_weather():
                     <div>습도</div>
                     <div style="font-weight:bold; font-size:18px;">{reh}%</div>
                 </div>
-                """, unsafe_allow_html=True)
+                """,
+                unsafe_allow_html=True,
+            )
 
         with col3:
             wind_deg = f" ({vec}°)" if vec is not None else ""
@@ -198,7 +192,9 @@ def show_weather():
                     <div>풍속/풍향</div>
                     <div style="font-weight:bold; font-size:18px;">{wsd} m/s / {wind_dir}{wind_deg}</div>
                 </div>
-                """, unsafe_allow_html=True)
+                """,
+                unsafe_allow_html=True,
+            )
 
         precipitation = f"{pty_desc}"
         if rn1 is not None and rn1 > 0:
@@ -218,9 +214,15 @@ def show_weather():
             ">
                 ☔ 강수: {precipitation}
             </div>
-            """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True,
+        )
 
-        st.markdown(f"<div style='text-align:right; font-size:12px; color:#666;'>{dt_str} 기준</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='text-align:right; font-size:12px; color:#666;'>{dt_str} 기준</div>",
+            unsafe_allow_html=True,
+        )
+
     summary(dt_str, t1h, reh, pty_desc, rn1, wsd, wind_dir, vec)
 
     st.markdown("---")
@@ -228,14 +230,15 @@ def show_weather():
     st.subheader("데이터 다운로드")
     st.dataframe(df_pivot)
 
-    # CSV 다운로드 버튼
-    csv = df_pivot.to_csv(index=False).encode('utf-8-sig')
+    csv = df_pivot.to_csv(index=False).encode("utf-8-sig")
     st.download_button(
         label=":material/download: CSV 파일",
         data=csv,
         file_name="ultra_short_weather.csv",
-        mime="text/csv"
+        mime="text/csv",
     )
 
     st.markdown("---")
-    st.markdown("[데이터 출처] 기상청 초단기실황 API")
+    st.markdown(
+        "[데이터 출처] 기상청 초단기실황 API"
+    )
