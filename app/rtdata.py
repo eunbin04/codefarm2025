@@ -141,7 +141,7 @@ def show_rtdata():
     if st.session_state.rt_last_update > 0:
         dt_kst = datetime.fromtimestamp(st.session_state.rt_last_update, tz=KST)
         last_update_str = dt_kst.strftime("%Y-%m-%d %H:%M:%S")
-        st.caption(f"마지막 갱신: {last_update_str} (자동: 60초 간격)")
+        st.caption(f"마지막 갱신: {last_update_str}")
     else:
         st.caption("초기 로딩 중...")
 

@@ -170,8 +170,10 @@ def find_outliers_and_mark(df: pd.DataFrame, datetime_col: str = "time_str"):
             "time_of_day": _safe_time(dataset.index),
         }
     )
+    combined = combined.dropna(subset=["temperature", "humidity"])
+
     hourly_corr = (
-        combined.dropna(subset=["temperature", "humidity"])
+        combined
         .groupby("time_of_day")[["temperature", "humidity"]]
         .corr()
         .unstack()

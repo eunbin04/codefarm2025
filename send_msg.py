@@ -1,3 +1,4 @@
+# send_msg.py
 import sqlite3
 import pandas as pd
 import requests
@@ -6,16 +7,33 @@ import os
 import json
 import qrcode
 import threading
-
+from datetime import datetime, timedelta
+import numpy as np
 
 TOKEN = "8363279994:AAHVMfjy7wxG_FmtTemoAoaXLgpWvKYtCj8"
 DB_PATH = "alarms.db"
 SENSOR_DB = "sensor_data.db"
 DATA_DIR = "data"
 CHAT_ID_FILE = os.path.join(DATA_DIR, "chat_ids.json")
+SETTINGS_FILE = "config/settings.json"
 BASE_URL = f"https://api.telegram.org/bot{TOKEN}"
 offset = None
 
+# ============================================================
+# 📌 settings.json 로드
+# ============================================================
+def load_settings():
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    # 기본값
+    return {
+        "farm_name": "농가",
+        "daily_stat_time": "08:24",
+        "t_location": 3,
+        "h_location": 2,
+        "r_location": 4,
+    }
 
 # ============================================================
 # 📌 data 폴더/ chat_ids.json 자동 생성
@@ -31,7 +49,6 @@ def init_storage():
         try:
             with open(CHAT_ID_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-
             if not isinstance(data, list):
                 with open(CHAT_ID_FILE, "w", encoding="utf-8") as f:
                     json.dump([], f, ensure_ascii=False, indent=4)
@@ -39,9 +56,8 @@ def init_storage():
             with open(CHAT_ID_FILE, "w", encoding="utf-8") as f:
                 json.dump([], f, ensure_ascii=False, indent=4)
 
-
 # ============================================================
-# 📌 chat_id 저장
+# 📌 chat_id 저장 / 로드
 # ============================================================
 def save_chat_id(chat_id):
     with open(CHAT_ID_FILE, "r", encoding="utf-8") as f:
@@ -57,11 +73,9 @@ def save_chat_id(chat_id):
         with open(CHAT_ID_FILE, "w", encoding="utf-8") as f:
             json.dump(chat_ids, f, ensure_ascii=False, indent=4)
 
-
 def load_chat_ids():
     with open(CHAT_ID_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
-
 
 # ============================================================
 # 📌 텔레그램 메시지 전송
@@ -84,11 +98,9 @@ def send_message(chat_id, text, add_keyboard=False):
 
     requests.post(url, json=payload)
 
-
 def broadcast(text):
     for cid in load_chat_ids():
         send_message(cid, text)
-
 
 # ============================================================
 # 📌 QR 코드 생성
@@ -102,7 +114,6 @@ def generate_qr():
 
     print(f"QR 코드 생성 완료: {qr_path}")
 
-
 # ============================================================
 # 📌 봇 username 확인
 # ============================================================
@@ -110,7 +121,6 @@ def get_bot_username():
     url = f"{BASE_URL}/getMe"
     res = requests.get(url).json()
     return res["result"]["username"]
-
 
 # ============================================================
 # 📌 실시간 버튼 → 센서 최신 행
@@ -133,9 +143,8 @@ def get_latest_sensor_data():
 
     return "<b>📡 최신 센서 데이터</b>\n<pre>" + block + "</pre>"
 
-
 # ============================================================
-# 📌 새로운 알람 감지 → 같은 created_at 묶어 전송
+# 📌 새로운 알람 감지 (alarms) → 그룹 전송
 # ============================================================
 def get_alarm_group_by_created_at(created_at):
     conn = sqlite3.connect(DB_PATH)
@@ -154,7 +163,6 @@ def get_alarm_group_by_created_at(created_at):
         blocks.append(f"<pre>{block}</pre>")
 
     return "<b>🚨 결측치 or 이상치 발생</b>\n" + "\n".join(blocks)
-
 
 def watch_db_changes():
     last_id = None
@@ -180,10 +188,171 @@ def watch_db_changes():
                 broadcast(msg)
 
         except Exception as e:
-            print("DB 감시 오류:", e)
+            print("DB 감시 오류(alarms):", e)
 
         time.sleep(1)
 
+# ============================================================
+# 📌 VPD 솔루션 알림 감지 (vpd_alarms)
+# ============================================================
+def get_vpd_alarm_group_by_created_at(created_at):
+    conn = sqlite3.connect(DB_PATH)
+    df = pd.read_sql_query(
+        "SELECT * FROM vpd_alarms WHERE created_at = ? ORDER BY id;",
+        conn,
+        params=[created_at]
+    )
+    conn.close()
+
+    if df.empty:
+        return "<b>💦 VPD 솔루션 생성</b>\n(해당 시각의 레코드 없음)"
+
+    blocks = []
+    for _, row in df.iterrows():
+        rd = row.to_dict()
+        w = max(len(k) for k in rd)
+        block = "".join(f"{k.ljust(w)} : {v}\n" for k, v in rd.items())
+        blocks.append(f"<pre>{block}</pre>")
+
+    return "<b>💦 VPD 솔루션 생성</b>\n" + "\n".join(blocks)
+
+def watch_vpd_db_changes():
+    last_id = None
+
+    while True:
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            df = pd.read_sql_query(
+                "SELECT id, created_at FROM vpd_alarms ORDER BY id DESC LIMIT 1;",
+                conn
+            )
+            conn.close()
+
+            if len(df) == 0:
+                time.sleep(1)
+                continue
+
+            current_id = df["id"].iloc[0]
+            created_at = df["created_at"].iloc[0]
+
+            if last_id is None:
+                last_id = current_id
+            elif current_id != last_id:
+                last_id = current_id
+                msg = get_vpd_alarm_group_by_created_at(created_at)
+                broadcast(msg)
+
+        except Exception as e:
+            print("DB 감시 오류(vpd_alarms):", e)
+
+        time.sleep(1)
+
+# ============================================================
+# 📌 하루 통계 요약 텍스트 생성 (perdata_report 요약 버전)
+# ============================================================
+def count_anomalies(series: pd.Series) -> int:
+    if len(series) < 4:
+        return 0
+    Q1 = series.quantile(0.25)
+    Q3 = series.quantile(0.75)
+    IQR = Q3 - Q1
+    lower = Q1 - 1.5 * IQR
+    upper = Q3 + 1.5 * IQR
+    anomalies = ((series < lower) | (series > upper)).sum()
+    return int(anomalies)
+
+def generate_daily_summary_text(target_date: datetime, settings: dict) -> str:
+    """
+    sensor_data.db의 measurements에서 target_date 하루치 데이터 가져와서
+    온도/습도/일사에 대한 간단한 통계 요약 텍스트 생성.
+    """
+    date_str = target_date.strftime("%Y-%m-%d")
+    start_ts = f"{date_str} 00:00:00"
+    end_ts = f"{date_str} 23:59:59"
+
+    conn = sqlite3.connect(SENSOR_DB)
+    query = """
+        SELECT time_str, temperature, humidity, irradiance
+        FROM measurements
+        WHERE time_str >= ? AND time_str <= ?
+        ORDER BY time_str ASC
+    """
+    df = pd.read_sql_query(query, conn, params=[start_ts, end_ts])
+    conn.close()
+
+    if df.empty:
+        return f"<b>📊 {date_str} 일일 요약</b>\n해당 날짜에 수집된 데이터가 없습니다."
+
+    # 숫자형 변환
+    for col in ["temperature", "humidity", "irradiance"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    df = df.dropna(subset=["temperature", "humidity", "irradiance"], how="all")
+    if df.empty:
+        return f"<b>📊 {date_str} 일일 요약</b>\n모든 센서 값이 NaN입니다."
+
+    lines = []
+    lines.append(f"<b>📊 {date_str} 일일 센서 요약</b>")
+
+    # 센서별 요약
+    sensors = {
+        "온도(°C)": "temperature",
+        "습도(%)": "humidity",
+        "일사(W/m²)": "irradiance",
+    }
+
+    for name_kr, col in sensors.items():
+        series = df[col].dropna()
+        if series.empty:
+            lines.append(f"\n{name_kr}: 데이터 없음")
+            continue
+
+        mean = series.mean()
+        max_v = series.max()
+        min_v = series.min()
+        std_v = series.std()
+        n = len(series)
+        anom = count_anomalies(series)
+
+        lines.append(
+            f"\n{name_kr}\n"
+            f" • 평균: {mean:.2f}, 최대: {max_v:.2f}, 최소: {min_v:.2f}\n"
+            f" • 표준편차: {std_v:.2f}, 데이터 개수: {n}, 이상치 개수: {anom}"
+        )
+
+    return "\n".join(lines)
+
+# ============================================================
+# 📌 daily_stat_time에 맞춰 하루 한 번 요약 전송
+# ============================================================
+def daily_stats_scheduler():
+    settings = load_settings()
+    farm_name = settings.get("farm_name", "농가")
+    daily_time_str = settings.get("daily_stat_time", "08:24")
+
+    try:
+        daily_hour, daily_minute = map(int, daily_time_str.split(":"))
+    except Exception:
+        daily_hour, daily_minute = 8, 24
+
+    last_sent_date = None
+
+    while True:
+        now = datetime.now()
+        today = now.date()
+
+        # 아직 오늘은 안 보냈고, 설정된 시간 이후라면 전날 기준 통계 보내기
+        if (last_sent_date != today) and (
+            (now.hour > daily_hour) or (now.hour == daily_hour and now.minute >= daily_minute)
+        ):
+            target_date = today - timedelta(days=1)  # 전날 기준
+            text = generate_daily_summary_text(target_date, settings)
+            header = f"<b>🏡 {farm_name} 일일 리포트</b>\n\n"
+            broadcast(header + text)
+            print(f"[DailyStats] {target_date.strftime('%Y-%m-%d')} 요약 전송 완료")
+            last_sent_date = today
+
+        time.sleep(30)
 
 # ============================================================
 # 📌 텔레그램 메시지 수신 루프
@@ -209,13 +378,16 @@ def telegram_listener():
 
             if text.startswith("/start"):
                 save_chat_id(chat_id)
-                send_message(chat_id, "환영합니다! '실시간'을 누르면 최신 센서 데이터를 볼 수 있습니다.", add_keyboard=True)
+                send_message(
+                    chat_id,
+                    "환영합니다! '실시간'을 누르면 최신 센서 데이터를 볼 수 있습니다.",
+                    add_keyboard=True,
+                )
 
             if text == "실시간":
                 send_message(chat_id, get_latest_sensor_data())
 
         time.sleep(0.5)
-
 
 # ============================================================
 # 📌 실행
@@ -225,7 +397,9 @@ generate_qr()
 
 print("Bot is running...")
 
-threading.Thread(target=watch_db_changes, daemon=True).start()
+threading.Thread(target=watch_db_changes, daemon=True).start()       # 이상치/결측
+threading.Thread(target=watch_vpd_db_changes, daemon=True).start()   # VPD 솔루션
+threading.Thread(target=daily_stats_scheduler, daemon=True).start()  # 일일 통계
 threading.Thread(target=telegram_listener, daemon=True).start()
 
 while True:

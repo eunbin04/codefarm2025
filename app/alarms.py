@@ -58,7 +58,7 @@ def show_alarms():
     if "alarms_last_update" in st.session_state and st.session_state.alarms_last_update > 0:
         korea_time = get_korea_time()
         last_update_str = korea_time.strftime("%Y-%m-%d %H:%M:%S")
-        st.caption(f"마지막 갱신: {last_update_str} (자동: 60초마다)")
+        st.caption(f"마지막 갱신: {last_update_str}")
     else:
         st.caption("초기 로딩 중...")
 
