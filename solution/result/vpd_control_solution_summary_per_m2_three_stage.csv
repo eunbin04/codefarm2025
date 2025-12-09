@@ -1,0 +1,2 @@
+datetime,T_measured,RH_measured,VPD_measured,T_after_passive,RH_after_passive,VPD_after_passive,VPD_target,T_target,RH_target,cooling_dT_C,water_L_total,water_L_per_m2,q_sens_kWh_per_m2,q_lat_kWh_per_m2,q_tot_kWh_per_m2,passive_ok
+2025-09-03 14:10:00,41.267,39.829,4.944929975898416,39.82879474658926,42.98897274546212,4.166696515534285,1.5,34.82879474658926,73.06853679550366,5.0,0.06034290263798672,0.06034290263798672,0.007537499999999998,0.041066697628629856,0.04860419762862985,False

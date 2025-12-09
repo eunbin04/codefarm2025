@@ -749,8 +749,11 @@ def print_user_notification(best: dict):
 # 9. CSV 저장용 함수
 # ============================================================
 def save_results_to_csv(df: pd.DataFrame, output_path: str) -> None:
-    df.to_csv(output_path, index=False)
-    print(f"[SAVE] 결과를 CSV로 저장했습니다: {output_path}")
+    # output_path에는 파일명만 들어온다고 가정
+    full_path = f"solution/result/{output_path}"  # 실제 저장 경로
+
+    df.to_csv(full_path, index=False)
+    print(f"[SAVE] 결과를 CSV로 저장했습니다: {full_path}")
 
 
 def save_control_solution_to_csv(row, best, vpd_col, output_path: str):
@@ -781,8 +784,11 @@ def save_control_solution_to_csv(row, best, vpd_col, output_path: str):
         data["passive_ok"] = np.nan
 
     df_sol = pd.DataFrame([data])
-    df_sol.to_csv(output_path, index=False)
-    print(f"[SAVE] VPD 제어 솔루션 요약을 CSV로 저장했습니다: {output_path}")
+
+    # 여기서도 동일하게 solution/result/ 아래로 저장
+    full_path = f"solution/result/{output_path}"
+    df_sol.to_csv(full_path, index=False)
+    print(f"[SAVE] VPD 제어 솔루션 요약을 CSV로 저장했습니다: {full_path}")
 
 
 # ============================================================
