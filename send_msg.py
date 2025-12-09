@@ -255,7 +255,7 @@ def get_vpd_alarm_group_by_created_at(created_at):
         state_line = f"T={T:.1f}°C, RH={H:.1f}%, VPD={vpd:.2f} kPa"
 
     lines = [
-        "<b>💦 VPD 제어 솔루션 생성</b>",
+        "<b>💦 VPD 제어 솔루션 알림</b>",
         "━━━━━━━━━━━",
         f"⏱ 시각 : {time_str}",
         f"🔎 현재 상태 : {state_line}",
