@@ -1,7 +1,7 @@
 {
     "farm_name": "코드팜 토마토온실",
     "alert_enabled": true,
-    "daily_stat_time": "14:53",
+    "daily_stat_time": "14:00",
     "auto_train_time": "17:15",
     "t_location": 3,
     "h_location": 2,
