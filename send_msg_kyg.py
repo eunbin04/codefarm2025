@@ -386,12 +386,12 @@ def generate_daily_summary_text(now_kst: datetime, settings: dict) -> str:
 def daily_stats_scheduler():
     settings = load_settings()
     farm_name = settings.get("farm_name", "농가")
-    daily_time_str = settings.get("daily_stat_time", "08:24")
+    daily_time_str = settings.get("daily_stat_time", "21:00")
 
     try:
         daily_hour, daily_minute = map(int, daily_time_str.split(":"))
     except Exception:
-        daily_hour, daily_minute = 8, 24
+        daily_hour, daily_minute = 21, 00
 
     last_sent_date = None
 
