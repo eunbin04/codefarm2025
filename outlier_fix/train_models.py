@@ -37,7 +37,7 @@ def train_model(df, t_location, h_location, r_location):
     # 3. 우선 전 컬럼을 숫자로 캐스팅 시도 (시간 컬럼 제외)
     for col in df_train.columns:
         if col != time_col:
-            df_train[col] = pd.to_numeric(df_train[col], errors='ignore')
+            df_train[col] = pd.to_numeric(df_train[col], errors='coerce')
     # 주요 센서 3개는 확실히 숫자로
     df_train['Humidity'] = pd.to_numeric(df_train['Humidity'], errors='coerce')
     df_train['Solar_Radiation'] = pd.to_numeric(df_train['Solar_Radiation'], errors='coerce')
